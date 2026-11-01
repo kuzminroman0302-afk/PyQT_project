@@ -205,9 +205,10 @@ class SecondWindow(QWidget):
             lst = json.dumps([])
             cur.execute("""INSERT INTO profile(login, password, name, surname, age, country, avatar, level, ex, money, pic)
             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                        (self.login, self.password, self.name, self.surname, int(self.age), self.country, self.avatar_choice, 5, 0, 0,
+                        (self.login, self.password, self.name, self.surname, int(self.age), self.country, self.avatar_choice, 1, 0, 0,
                          lst))
             self.con.commit()
+
 
             self.lob = Lobby(self.flag, self.login)
             self.lob.show()
@@ -235,8 +236,6 @@ class Lobby(QWidget):
     def initUI(self):
         self.setWindowTitle('Lobby')
         self.setFixedSize(1540, 900)
-        with open("info.json", "r", encoding="utf-8") as f:
-            self.profile = json.load(f)
         self.setStyleSheet("""
             QWidget {
                 background: qlineargradient(

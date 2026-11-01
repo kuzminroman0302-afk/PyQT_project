@@ -1,5 +1,7 @@
 import json
 import sys
+import sqlite3
+
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QApplication, QWidget, QRadioButton, QPushButton, QLabel, QLineEdit, QLCDNumber, QMessageBox
 import random
@@ -91,6 +93,7 @@ class TicTacToe_bot(QWidget):
 
 
     def clic(self, i, j):
+        self.flag = False
         btn = self.button_grid[i][j]
         if btn.text() != ' ' or self.v is False:
             return
@@ -115,7 +118,31 @@ class TicTacToe_bot(QWidget):
                         else:
                             btn.setText("X")
                         break
-        self.check()
+        if not self.flag:
+            self.check()
+
+    def win_user(self):
+        con = sqlite3.connect("proect.db")
+        cur = con.cursor()
+        name, surname, level, money, ex = cur.execute("select name, surname, level, money, ex from profile where login=?", (self.login,)).fetchone()
+
+        self.result.setText(f"Выиграл {surname + " " + name}!")
+        self.result.resize(500, 80)
+        QMessageBox.information(self, 'Победа!', 'Поздравляю вы прошли первый уровень!\n'
+                                                 'Вам начислено 25 ฿.\n'
+                                                 'Ex + 10')
+        money += 25
+        if level == 1:
+            level += 1
+        ex += 10
+        cur.execute("update profile set level=?, money=?, ex=? where login=?",
+                    (level, money, ex, self.login))
+        con.commit()
+        con.close()
+        self.close()
+        from proect import Lobby
+        self.lobby = Lobby(None, self.login)
+        self.lobby.show()
 
     def check(self):
         if self.win() is not True:
@@ -124,50 +151,16 @@ class TicTacToe_bot(QWidget):
                 if self.pl == "O":
                     self.result.setText("Выиграл БОТ!")
                 else:
-                    with open("info.json", "r") as f:
-                        prof = json.load(f)
-                    self.result.setText(f"Выиграл {prof[self.login]["surname"] + prof[self.login]["name"]}!")
-                    self.result.resize(500, 80)
-                    QMessageBox.information(self, 'Победа!', 'Поздравляю вы прошли первый уровень!\n'
-                                                             'Вам начислено 25 ฿.\n'
-                                                             'Ex + 10')
-                    self.close()
-                    from proect import Lobby
-                    self.lobby = Lobby(None, self.login)
-                    self.lobby.show()
-                    prof[self.login]["money"] += 25
-                    if prof[self.login]["level"] == 1:
-                        prof[self.login]["level"] += 1
-                    prof[self.login]["ex"] += 10
-                    with open('info.json', 'w') as f:
-                        json.dump(prof, f)
-                self.result.resize(500, 80)
-                self.result.show()
-                self.v = False
+                    self.win_user()
             elif self.win() == "O":
                 if self.pl == "X":
                     self.result.setText("Выиграл БОТ!")
                 else:
-                    with open("info.json", "r") as f:
-                        prof = json.load(f)
-                    self.result.setText(f"Выиграл {prof[self.login]["surname"] + prof[self.login]["name"]}!")
-                    self.result.resize(500, 80)
-                    QMessageBox.information(self, 'Победа!', 'Поздравляю вы прошли первый уровень!\n'
-                                                             'Вам начислено 25 ฿.\n'
-                                                             'Ex + 10')
-                    self.close()
-                    from proect import Lobby
-                    self.lobby = Lobby(None, self.login)
-                    self.lobby.show()
-                    prof[self.login]["money"] += 25
-                    if prof[self.login]["level"] == 1:
-                        prof[self.login]["level"] += 1
-                    prof[self.login]["ex"] += 10
-                    with open('info.json', 'w') as f:
-                        json.dump(prof, f)
-                self.result.resize(500, 80)
-                self.result.show()
-                self.v = False
+                    self.win_user()
+            self.result.resize(500, 80)
+            self.result.show()
+            self.v = False
+            self.flag = True
         if self.over():
             self.dis()
             self.result.setText("Ничья!")

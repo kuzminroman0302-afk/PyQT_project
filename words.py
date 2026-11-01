@@ -150,6 +150,12 @@ class HangmanGame(QWidget):
         self.new_game_btn.clicked.connect(self.start_new_game)
         right_layout.addWidget(self.new_game_btn)
 
+        self.exit_btn = QPushButton("🔄 Новая игра")
+        self.exit_btn.setFixedHeight(60)
+        self.exit_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.exit_btn.clicked.connect(self.exit)
+        right_layout.addWidget(self.exit_btn)
+
         right_layout.addStretch()
         center_layout.addLayout(right_layout)
         main_layout.addLayout(center_layout)
@@ -196,6 +202,9 @@ class HangmanGame(QWidget):
                 row += 1
 
         main_layout.addLayout(keyboard_layout)
+
+    def exit(self):
+        self.close()
 
     def start_new_game(self):
         self.current_word, self.hint = random.choice(self.words)
@@ -329,6 +338,6 @@ class HangmanGame(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    game = HangmanGame()
+    game = HangmanGame("sdfds")
     game.show()
     sys.exit(app.exec())

@@ -298,10 +298,6 @@ class History(QWidget):
         self.stacked_widget.setCurrentWidget(self.finish_page)
 
     def restart_quiz(self):
-        with open("info.json", "r") as f:
-            prof = json.load(f)
-
-
         total = len(self.questions)
         percent = round(self.score / total * 100)
 
@@ -309,17 +305,18 @@ class History(QWidget):
             QMessageBox.information(self, 'Победа!', 'Поздравляю вы прошли второй уровень!\n'
                                                      'Вам начислено 30 ฿.\n'
                                                      'Ex + 15')
-            con = sqlite3.connect("proect.db")
-            cur = con.cursor()
-            s = cur.execute("SELECT * FROM questions WHERE correct=1;")
-            cur.execute("UPDATE profile SET money=?, ex=? WHERE id=?",)
-            prof[self.login]["money"] += 30
-            if prof[self.login]["level"] == 2:
-                prof[self.login]["level"] += 1
-            prof[self.login]["ex"] += 15
-
-            with open('info.json', 'w') as f:
-                json.dump(prof, f)
+            try:
+                con = sqlite3.connect("proect.db")
+                cur = con.cursor()
+                s = cur.execute("SELECT money, ex, level FROM profile WHERE login=?", (self.login,)).fetchall()
+                cur.execute("UPDATE profile SET money=?, ex=? WHERE login=?", (s[0][0] + 30, s[0][1] + 15, self.login))
+                con.commit()
+                if s[0][2] == 2:
+                    cur.execute("UPDATE profile SET level=? WHERE login=?", (s[0][2] + 1, self.login))
+                    con.commit()
+                con.close()
+            except Exception as e:
+                print(e)
         else:
             QMessageBox.warning(self, 'Поражение', 'Вы ответили не на все вопросы правильно.\n'
                                                    'Попробуйте еще раз, чтобы получить награду.')
