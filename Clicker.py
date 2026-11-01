@@ -1,11 +1,12 @@
+import sqlite3
 import sys
+import random
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QFrame, QGraphicsDropShadowEffect, QScrollArea, QGridLayout
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QColor
-import random
 
 
 class InfoWindow(QWidget):
@@ -67,11 +68,6 @@ class InfoWindow(QWidget):
 class Achievements(QWidget):
     def __init__(self, one, two, three, four, five):
         super().__init__()
-        self.five = five
-        self.four = four
-        self.three = three
-        self.two = two
-        self.one = one
         self.setWindowTitle("Достижения")
         self.setFixedSize(500, 400)
         self.setStyleSheet("""
@@ -104,30 +100,19 @@ class Achievements(QWidget):
         title.setStyleSheet("color: #00e5ff; font-size: 28px; font-weight: bold;")
         layout.addWidget(title)
 
-        one = "❌"
-        two = "❌"
-        three = "❌"
-        four = "❌"
-        five = "❌"
-
-        if self.one:
-            one = "✅"
-        if self.two:
-            two = "✅"
-        if self.three:
-            three = "✅"
-        if self.four:
-            four = "✅"
-        if self.five:
-            five = "✅"
+        one_status = "✅" if one else "❌"
+        two_status = "✅" if two else "❌"
+        three_status = "✅" if three else "❌"
+        four_status = "✅" if four else "❌"
+        five_status = "✅" if five else "❌"
 
         text = QLabel(
             "Это все достижения которые надо выполнить чтобы перейти на следующий уровень\n\n"
-            f"1 - Прокачать автокликер до максимального уровня. {one}\n"
-            f"2 - Прокачать множитель до максимального уровня. {two}\n"
-            f"3 - Прокачать крит до максимального уровня. {three}\n"
-            f"4 - Выиграть в бонусном клике. {four}\n"
-            f"5 - Добыть 100000 кристалов. {five}\n\n"
+            f"1 - Прокачать автокликер до максимального уровня. {one_status}\n"
+            f"2 - Прокачать множитель до максимального уровня. {two_status}\n"
+            f"3 - Прокачать крит до максимального уровня. {three_status}\n"
+            f"4 - Выиграть в бонусном клике. {four_status}\n"
+            f"5 - Добыть 100000 кристалов. {five_status}\n\n"
             "Удачи в добыче космических кристаллов!"
         )
         text.setWordWrap(True)
@@ -145,26 +130,59 @@ class Achievements(QWidget):
 class ClickerUI(QWidget):
     def __init__(self, login):
         super().__init__()
-        self.one_click = 1
         self.login = login
-        self.price_auto = 50
-        self.level_auto = 0
-        self.auto_income = 0
-        self.crit_n = 0
-        self.price_crit = 200
-        self.level_mult = 0
-        self.price_mult = 100
-        self.mult_lev = 1
-        self.one = False
-        self.two = False
-        self.three = False
-        self.four = False
-        self.five = False
+        self.con = sqlite3.connect("proect.db")
+        cur = self.con.cursor()
+
+        res = cur.execute("SELECT * FROM Clicker WHERE login = ?", (self.login,)).fetchone()
+
+        if res is None:
+            cur.execute("""INSERT INTO Clicker(login, money, autoclicker, mull, critical, click, one, two, three, four, five)
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (self.login, 100000000, 0, 1, 0, 1, 0, 0, 0, 0, 0))
+            self.con.commit()
+            res = cur.execute("SELECT * FROM Clicker WHERE login = ?", (self.login,)).fetchone()
+
+        self.login, self.money, self.level_auto, self.level_mult, self.crit_n, self.one_click, self.one, self.two, self.three, self.four, self.five = res
+
+        self.auto_income = (2 ** self.level_auto) - 1 if self.level_auto > 0 else 0
+
         self.initUI()
+        self.update_prices()
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.tick)
         self.timer.start(1000)
+
+    def update_prices(self):
+        self.price_auto = 50 + (self.level_auto * 100)
+        self.price_crit = 200 + (self.crit_n * 50)
+        self.price_mult = 100 + (self.level_mult * 100)
+
+        if self.level_auto < 10:
+            self.auto_btn.setText(f'🤖 Автокликер ур.{self.level_auto}\nЦена: {self.price_auto} 💎')
+        else:
+            self.auto_btn.setText(f'🤖 Автокликер max')
+
+        if self.level_mult < 10:
+            self.mult_btn.setText(f'⚡ Множитель x2 (ур.{self.level_mult})\nЦена: {self.price_mult} 💎')
+        else:
+            self.mult_btn.setText(f'⚡ Множитель x2 max')
+
+        if self.crit_n < 100:
+            self.crit_btn.setText(f'🎯 Крит шанс: {self.crit_n}%\nЦена: {self.price_crit} 💎')
+        else:
+            self.crit_btn.setText(f'🎯 Крит шанс: {self.crit_n} max')
+
+    def save_to_db(self):
+        cur = self.con.cursor()
+        cur.execute("""
+            UPDATE Clicker 
+            SET money=?, autoclicker=?, mull=?, critical=?, click=?, one=?, two=?, three=?, four=?, five=?
+            WHERE login=?
+        """, (int(self.score_label.text()), self.level_auto, self.level_mult, self.crit_n, self.one_click,
+              int(self.one), int(self.two), int(self.three), int(self.four), int(self.five), self.login))
+        self.con.commit()
 
     def initUI(self):
         self.setWindowTitle("Кликер: Космические кристаллы")
@@ -207,12 +225,12 @@ class ClickerUI(QWidget):
             "background: rgba(30, 41, 59, 0.8); border-radius: 20px; border: 2px solid #00e5ff;")
         self.score_layout = QVBoxLayout(self.score_frame)
 
-        self.score_label = QLabel("0")
+        self.score_label = QLabel(str(self.money))
         self.score_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.score_label.setStyleSheet("color: #00e5ff; font-size: 64px; font-weight: 900;")
         self.score_layout.addWidget(self.score_label)
 
-        self.income_label = QLabel("Доход в секунду: 0")
+        self.income_label = QLabel(f"Доход в секунду: {self.auto_income}")
         self.income_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.income_label.setStyleSheet("color: #94a3b8; font-size: 18px;")
         self.score_layout.addWidget(self.income_label)
@@ -236,12 +254,8 @@ class ClickerUI(QWidget):
         self.btn_info.setStyleSheet("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #00e5ff, stop:1 #0072ff);
-                color: white;
-                border: none;
-                border-radius: 15px;
-                font-size: 16px;
-                font-weight: bold;
-                padding: 5px;
+                color: white; border: none; border-radius: 15px;
+                font-size: 16px; font-weight: bold; padding: 5px;
             }
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #33ebff, stop:1 #338cff);
@@ -250,17 +264,28 @@ class ClickerUI(QWidget):
         self.left_btn_layout.addWidget(self.btn_info)
         self.btn_info.clicked.connect(self.open_info)
 
+        self.btn_lobby = QPushButton("Lobby", self)
+        self.btn_lobby.setFixedSize(200, 60)
+        self.btn_lobby.setStyleSheet("""
+                    QPushButton {
+                        background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 red, stop:1 red);
+                        color: white; border: none; border-radius: 15px;
+                        font-size: 16px; font-weight: bold; padding: 5px;
+                    }
+                    QPushButton:hover {
+                        background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 red, stop:1 red);
+                    }
+                """)
+        self.left_btn_layout.addWidget(self.btn_lobby)
+        self.btn_lobby.clicked.connect(self.lobby)
+
         self.btn_achievements = QPushButton("Достижения", self)
         self.btn_achievements.setFixedSize(200, 60)
         self.btn_achievements.setStyleSheet("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #f59e0b, stop:1 #fbbf24);
-                color: white;
-                border: none;
-                border-radius: 15px;
-                font-size: 16px;
-                font-weight: bold;
-                padding: 5px;
+                color: white; border: none; border-radius: 15px;
+                font-size: 16px; font-weight: bold; padding: 5px;
             }
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #fbbf24, stop:1 #fcd34d);
@@ -277,10 +302,7 @@ class ClickerUI(QWidget):
         self.click_button.setStyleSheet("""
             QPushButton {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #ff416c, stop:1 #ff4b2b);
-                color: white;
-                border-radius: 125px;
-                font-size: 80px;
-                font-weight: bold;
+                color: white; border-radius: 125px; font-size: 80px; font-weight: bold;
                 border: 6px solid rgba(255, 255, 255, 0.3);
             }
             QPushButton:hover {
@@ -288,6 +310,7 @@ class ClickerUI(QWidget):
             }
         """)
         self.click_button.clicked.connect(self.clic)
+
         self.btn_shadow = QGraphicsDropShadowEffect(self)
         self.btn_shadow.setBlurRadius(50)
         self.btn_shadow.setColor(QColor(255, 65, 108, 150))
@@ -301,12 +324,12 @@ class ClickerUI(QWidget):
             "background: rgba(30, 41, 59, 0.8); border-radius: 20px; border: 2px solid #fbbf24;")
         self.prestige_layout = QVBoxLayout(self.prestige_frame)
 
-        self.prestige_title = QLabel("🌟 Доход за клик:\n1")
+        self.prestige_title = QLabel(f"🌟 Доход за клик:\n{self.one_click}")
         self.prestige_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.prestige_title.setStyleSheet("color: #fbbf24; font-size: 24px; font-weight: bold;")
         self.prestige_layout.addWidget(self.prestige_title)
-
         self.center_layout.addWidget(self.prestige_frame)
+
         main_layout.addLayout(self.center_layout)
 
         self.shop_scroll = QScrollArea()
@@ -317,7 +340,7 @@ class ClickerUI(QWidget):
         self.shop_scroll.setWidget(self.shop_widget)
         main_layout.addWidget(self.shop_scroll)
 
-        self.auto_btn = QPushButton("🤖 Автокликер ур.0\nЦена: 50 💎")
+        self.auto_btn = QPushButton()
         self.auto_btn.setFixedHeight(80)
         self.auto_btn.setStyleSheet("""
             QPushButton {
@@ -328,7 +351,7 @@ class ClickerUI(QWidget):
         self.shop_layout.addWidget(self.auto_btn, 0, 0)
         self.auto_btn.clicked.connect(self.auto_click)
 
-        self.mult_btn = QPushButton("⚡ Множитель x1 (ур.0)\nЦена: 100 💎")
+        self.mult_btn = QPushButton()
         self.mult_btn.setFixedHeight(80)
         self.mult_btn.setStyleSheet("""
             QPushButton {
@@ -339,7 +362,7 @@ class ClickerUI(QWidget):
         self.shop_layout.addWidget(self.mult_btn, 0, 1)
         self.mult_btn.clicked.connect(self.mult)
 
-        self.crit_btn = QPushButton("🎯 Крит шанс: 0%\nЦена: 200 💎")
+        self.crit_btn = QPushButton()
         self.crit_btn.setFixedHeight(80)
         self.crit_btn.setStyleSheet("""
             QPushButton {
@@ -365,6 +388,24 @@ class ClickerUI(QWidget):
         self.info_window = InfoWindow()
         self.info_window.show()
 
+    def lobby(self):
+        from proect import Lobby
+        if self.one == 1 and self.two == 1 and self.three == 1 and self.four == 1 and self.five == 1:
+            cur = self.con.cursor()
+            res = cur.execute("SELECT level, ex FROM profile WHERE login = ?", (self.login,)).fetchone()
+            lev = res[0]
+            if res[0] == 5:
+                lev = res[0] + 1
+            cur.execute("""
+                UPDATE profile 
+                SET level = ?, ex = ?
+                WHERE login=?
+            """, (lev, res[1] + 30, self.login))
+            self.con.commit()
+        self.close()
+        self.lobby = Lobby(None, self.login)
+        self.lobby.show()
+
     def open_achievements(self):
         self.achievements_window = Achievements(self.one, self.two, self.three, self.four, self.five)
         self.achievements_window.show()
@@ -373,69 +414,73 @@ class ClickerUI(QWidget):
         if int(self.score_label.text()) >= 100:
             crit_num = random.randint(1, 3)
             if crit_num == 3:
-                self.score_label.setText(str(int(self.score_label.text()) + self.one_click * 10))
-                self.four = True
+                self.score_label.setText(str(int(self.score_label.text()) + (self.one_click * 10)))
+                self.four = 1
             else:
                 self.score_label.setText(str(int(self.score_label.text()) - 100))
-            self.bonus_btn.setText(f'🎁 Бонусный клик (Случайный x5)\nЦена: 100 💎')
+            self.save_to_db()
 
     def mult(self):
-        if int(self.score_label.text()) >= self.price_mult and self.level_mult != 10:
+        if int(self.score_label.text()) >= self.price_mult and self.level_mult < 10:
             self.score_label.setText(str(int(self.score_label.text()) - self.price_mult))
-            self.price_mult *= 2
             self.level_mult += 1
             self.one_click *= 2
-            if self.level_mult == 10:
-                self.mult_btn.setText(f'⚡ Множитель x2 max')
-                self.two = True
-            else:
-                self.mult_btn.setText(f'⚡ Множитель x2 (ур.{self.level_mult})\nЦена: {self.price_mult} 💎')
             self.prestige_title.setText(f"🌟 Доход за клик:\n {self.one_click}")
+
+            if self.level_mult == 10:
+                self.two = 1
+
+            self.update_prices()
+            self.save_to_db()
 
     def clic(self):
         if self.crit_n != 0:
             crit_num = random.randint(1, 20)
             if crit_num in [i for i in range(1, self.crit_n // 5 + 1)]:
                 self.score_label.setText(str(int(self.score_label.text()) + self.one_click * 5))
+                self.save_to_db()
                 return
         self.score_label.setText(str(int(self.score_label.text()) + self.one_click))
+        self.save_to_db()
 
     def auto_click(self):
-        if int(self.score_label.text()) >= self.price_auto and self.level_auto != 10:
+        if int(self.score_label.text()) >= self.price_auto and self.level_auto < 10:
             if self.level_auto == 0:
                 self.auto_income = 1
             self.score_label.setText(str(int(self.score_label.text()) - self.price_auto))
-            self.price_auto += 100
+
             self.level_auto += 1
             self.auto_income *= 2
+
             if self.level_auto == 10:
-                self.auto_btn.setText(f'🤖 Автокликер max')
-                self.one = True
-            else:
-                self.auto_btn.setText(f'🤖 Автокликер ур.{self.level_auto}\nЦена: {self.price_auto} 💎')
+                self.one = 1
+
             self.income_label.setText(f"Доход в секунду: {self.auto_income}")
+            self.update_prices()
+            self.save_to_db()
 
     def tick(self):
         if self.auto_income > 0:
             current_score = int(self.score_label.text())
             self.score_label.setText(str(current_score + self.auto_income))
-        if int(self.score_label.text()) >= 100000:
-            self.five = True
+        if int(self.score_label.text()) >= 100000 and not self.five:
+            self.five = 1
+            self.save_to_db()
 
     def crit(self):
-        if int(self.score_label.text()) >= self.price_crit and self.crit_n != 100:
+        if int(self.score_label.text()) >= self.price_crit and self.crit_n < 100:
             self.score_label.setText(str(int(self.score_label.text()) - self.price_crit))
             self.crit_n += 5
-            self.price_crit += 200
+
             if self.crit_n == 100:
-                self.crit_btn.setText(f'🎯 Крит шанс: {self.crit_n} max ')
-                self.three = True
-                return
-            self.crit_btn.setText(f'🎯 Крит шанс: {self.crit_n}%\nЦена: {self.price_crit} 💎')
+                self.three = 1
+
+            self.update_prices()
+            self.save_to_db()
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = ClickerUI()
+    window = ClickerUI("test_user")
     window.show()
     sys.exit(app.exec())

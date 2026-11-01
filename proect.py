@@ -1,19 +1,14 @@
-import io
 import json
 import sys
-import traceback
-from tabnanny import check
-import time
+import sqlite3
 
-from PIL import Image
 from PyQt6.QtCore import Qt, QTimer
 
-from PyQt6.QtGui import QFont, QPainter, QColor, QPixmap
-from PyQt6.QtWidgets import (QApplication, QWidget, QPlainTextEdit, QRadioButton,
-                             QPushButton, QLabel, QLineEdit, QLCDNumber,
-                             QCheckBox, QMainWindow, QDialog, QSlider,
-                             QInputDialog, QFileDialog, QHBoxLayout, QVBoxLayout, QMessageBox)
-from PyQt6 import uic
+from PyQt6.QtGui import QPixmap
+from PyQt6.QtWidgets import (QApplication, QWidget, QRadioButton,
+                             QPushButton, QLabel, QLineEdit,
+                             QCheckBox, QMainWindow,
+                             QInputDialog, QHBoxLayout, QVBoxLayout, QMessageBox)
 from krestic_nolik_solo import TicTacToe_friend
 from krestic_nolik_bot import TicTacToe_bot
 from viktorina import History
@@ -92,6 +87,7 @@ class SecondWindow(QWidget):
         super().__init__()
         self.one = False
         self.avatar_choice = ''
+        self.con = sqlite3.connect("proect.db")
         self.initUI()
 
     def initUI(self):
@@ -102,9 +98,12 @@ class SecondWindow(QWidget):
         self.login, ok_pressed_login = QInputDialog.getText(
             self, 'Знакомство', 'Введите логин.'
         )
-        with open("info.json", "r") as f:
-            keys = json.load(f)
-        if self.login.strip() in list(keys.keys()):
+        cur = self.con.cursor()
+        s = cur.execute("select login from profile").fetchall()
+        self.users = []
+        for i in s:
+            self.users.append(i[0])
+        if self.login.strip() in self.users:
             self.hide()
             QMessageBox.warning(self, 'Предупреждение!', 'Такой логин уже существует!')
             self.main.show()
@@ -195,27 +194,20 @@ class SecondWindow(QWidget):
 
     def ava(self):
         if self.ischeck() is not False:
+            if self.name.strip() == '':
+                self.name = "User" + str(len(self.users) + 1)
+            if self.surname.strip() == '':
+                self.surname = ""
             self.avatar_choice = self.avatar[self.ischeck()]
             self.hide()
             self.flag = True
-            with open("info.json", "r", encoding="utf-8") as f1:
-                key = json.load(f1)
-            if self.name == "":
-                self.name = "User" + str(len(key) + 1)
-            if self.surname == "":
-                self.surname = ":("
-            key[self.login] = {"password": self.password,
-                               "name": self.name,
-                               "surname": self.surname,
-                               "age": self.age,
-                               "country": self.country,
-                               "avatar": self.avatar_choice,
-                               "level": 1,
-                               "ex": 0,
-                               "money": 0,
-                               "pic": []}
-            with open("info.json", "w", encoding="utf-8") as f:
-                json.dump(key, f)
+            cur = self.con.cursor()
+            lst = json.dumps([])
+            cur.execute("""INSERT INTO profile(login, password, name, surname, age, country, avatar, level, ex, money, pic)
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (self.login, self.password, self.name, self.surname, int(self.age), self.country, self.avatar_choice, 5, 0, 0,
+                         lst))
+            self.con.commit()
 
             self.lob = Lobby(self.flag, self.login)
             self.lob.show()
@@ -233,8 +225,11 @@ class Lobby(QWidget):
         self.flag = flag
         self.prof = []
         self.pic_lst = []
-        self.play_pic_lst = ["icon.png"]
         super().__init__()
+        self.con = sqlite3.connect("proect.db")
+        self.cur = self.con.cursor()
+        res = self.cur.execute("""select * from profile where login = ?""", (self.login,)).fetchone()
+        self.login, self.password, self.name, self.surname, self.age, self.country, self.avatar, self.level0, self.ex, self.money, self.pic = res
         self.initUI()
 
     def initUI(self):
@@ -318,186 +313,193 @@ class Lobby(QWidget):
         self.continue_btn.hide()
         self.title.hide()
         self.subtitle.hide()
-        self.btn_profile = QPushButton("Профиль", self)
-        self.btn_profile.setFixedSize(292, 80)
-        self.btn_profile.move(1248, 820)
-        self.btn_profile.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_profile.show()
-        self.btn_profile.setStyleSheet("""
-            QPushButton {
-                background-color: #ffd166;
-                color: #1e3c72;
-                font-size: 26px;
-                font-weight: bold;
-                border: none;
-                border-radius: 40px;
-            }
-            QPushButton:hover   { background-color: #ffe08a; }
-            QPushButton:pressed { background-color: #e6b94a; }
-        """)
-        self.btn_profile.clicked.connect(self.profile_fon)
-        self.image1 = QPixmap(self.profile[self.login]["avatar"])
-        self.image2 = QLabel(self)
-        self.image2.move(1168, 820)
-        self.image2.resize(80, 80)
-        scaled = self.image1.scaled(
-            80, 80,
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation
-        )
-        self.image2.setPixmap(scaled)
-        self.image2.setStyleSheet("""
-            border: 2px solid #334155;
-            border-radius: 12px;
-            background-color: #1e293b;
-            padding: 4px;
-        """)
-        self.image2.show()
-        self.image2.resize(80, 80)
 
-        self.btn_shop = QPushButton("Магазин", self)
-        self.btn_shop.setFixedSize(282, 80)
-        self.btn_shop.move(876, 820)
-        self.btn_shop.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_shop.show()
-        self.btn_shop.setStyleSheet("""
-            QPushButton {
-                background-color: #ffd166;
-                color: #1e3c72;
-                font-size: 26px;
-                font-weight: bold;
-                border: none;
-                border-radius: 40px;
-            }
-            QPushButton:hover   { background-color: #ffe08a; }
-            QPushButton:pressed { background-color: #e6b94a; }
-        """)
-        self.btn_shop.clicked.connect(self.shop_fon)
+        try:
+            self.btn_profile = QPushButton("Профиль", self)
+            self.btn_profile.setFixedSize(292, 80)
+            self.btn_profile.move(1248, 820)
+            self.btn_profile.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.btn_profile.show()
+            self.btn_profile.setStyleSheet("""
+                QPushButton {
+                    background-color: #ffd166;
+                    color: #1e3c72;
+                    font-size: 26px;
+                    font-weight: bold;
+                    border: none;
+                    border-radius: 40px;
+                }
+                QPushButton:hover   { background-color: #ffe08a; }
+                QPushButton:pressed { background-color: #e6b94a; }
+            """)
+            self.btn_profile.clicked.connect(self.profile_fon)
 
-        self.exit_btn = QPushButton("ВЫЙТИ", self)
-        self.exit_btn.setFixedSize(282, 80)
-        self.exit_btn.move(584, 820)
-        self.exit_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.exit_btn.show()
-        self.exit_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #ffd166;
-                color: #1e3c72;
-                font-size: 26px;
-                font-weight: bold;
-                border: none;
-                border-radius: 40px;
-            }
-            QPushButton:hover   { background-color: #ffe08a; }
-            QPushButton:pressed { background-color: #e6b94a; }
-        """)
-        self.exit_btn.clicked.connect(self.exit)
+            self.image1 = QPixmap(str(self.avatar))
+            self.image2 = QLabel(self)
+            self.image2.move(1168, 820)
+            self.image2.resize(80, 80)
+            scaled = self.image1.scaled(
+                80, 80,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+            self.image2.setPixmap(scaled)
+            self.image2.setStyleSheet("""
+                border: 2px solid #334155;
+                border-radius: 12px;
+                background-color: #1e293b;
+                padding: 4px;
+            """)
+            self.image2.show()
 
-        self.cheat_btn = QPushButton("Чит-код", self)
-        self.cheat_btn.setFixedSize(282, 80)
-        self.cheat_btn.move(292, 820)
-        self.cheat_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.cheat_btn.show()
-        self.cheat_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #ffd166;
-                color: #1e3c72;
-                font-size: 26px;
-                font-weight: bold;
-                border: none;
-                border-radius: 40px;
-            }
-            QPushButton:hover   { background-color: #ffe08a; }
-            QPushButton:pressed { background-color: #e6b94a; }
-        """)
-        self.cheat_btn.clicked.connect(self.cheat)
+            self.btn_shop = QPushButton("Магазин", self)
+            self.btn_shop.setFixedSize(282, 80)
+            self.btn_shop.move(876, 820)
+            self.btn_shop.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.btn_shop.show()
+            self.btn_shop.setStyleSheet("""
+                QPushButton {
+                    background-color: #ffd166;
+                    color: #1e3c72;
+                    font-size: 26px;
+                    font-weight: bold;
+                    border: none;
+                    border-radius: 40px;
+                }
+                QPushButton:hover   { background-color: #ffe08a; }
+                QPushButton:pressed { background-color: #e6b94a; }
+            """)
+            self.btn_shop.clicked.connect(self.shop_fon)
 
-        self.bonus_btn = QPushButton("Казино", self)
-        self.bonus_btn.setFixedSize(282, 80)
-        self.bonus_btn.move(0, 820)
-        self.bonus_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.bonus_btn.show()
-        self.bonus_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #ffd166;
-                color: #1e3c72;
-                font-size: 26px;
-                font-weight: bold;
-                border: none;
-                border-radius: 40px;
-            }
-            QPushButton:hover   { background-color: #ffe08a; }
-            QPushButton:pressed { background-color: #e6b94a; }
-        """)
-        self.bonus_btn.clicked.connect(self.casino)
+            self.exit_btn = QPushButton("ВЫЙТИ", self)
+            self.exit_btn.setFixedSize(282, 80)
+            self.exit_btn.move(584, 820)
+            self.exit_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.exit_btn.show()
+            self.exit_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #ffd166;
+                    color: #1e3c72;
+                    font-size: 26px;
+                    font-weight: bold;
+                    border: none;
+                    border-radius: 40px;
+                }
+                QPushButton:hover   { background-color: #ffe08a; }
+                QPushButton:pressed { background-color: #e6b94a; }
+            """)
+            self.exit_btn.clicked.connect(self.exit)
 
-        x = 0
-        y = 220
-        y1 = 10
-        self.btn_levels = []
-        self.kek_pic = []
-        self.pic = ["icon.png", "quiz.jpg", "reaction.jpg", "human.jpg", "clicker.jpg", "snake.jpg"]
-        for i in range(10):
-            if i == 0 or i == 1 or i == 2 or i == 3 or i == 4 or i == 5:
-                self.icon = QPixmap(self.pic[i])
-                self.icon1 = QLabel(self)
-                self.icon1.move(x, y1)
-                self.icon1.resize(270, 200)
-                scaled = self.icon.scaled(
-                    282, 200,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-                self.icon1.setPixmap(scaled)
-                self.icon1.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                self.icon1.setStyleSheet("""
-                    border: 2px solid #334155;
-                    border-radius: 8px;
-                    background-color: #1e293b;
-                    padding: 4px;
-                """)
-                self.icon1.show()
-                self.kek_pic.append(self.icon1)
-            self.btn_level = QPushButton(f"Уровень: {i + 1}", self)
-            self.btn_level.setFixedSize(282, 80)
-            self.btn_level.move(x, y)
-            self.btn_level.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.btn_level.show()
-            if self.profile[self.login]["level"] >= i + 1:
-                self.btn_level.setStyleSheet("""
-                    QPushButton {
-                        background-color: #16a34a;
-                        color: #1e3c72;
-                        font-size: 26px;
-                        font-weight: bold;
-                        border: none;
-                        border-radius: 40px;
-                    }
-                    QPushButton:hover   { background-color: #16a34a; }
-                    QPushButton:pressed { background-color: #16a34a; }
-                """)
-            else:
-                self.btn_level.setStyleSheet("""
-                    QPushButton {
-                        background-color: #dc2626;
-                        color: #1e3c72;
-                        font-size: 26px;
-                        font-weight: bold;
-                        border: none;
-                        border-radius: 40px;
-                    }
-                    QPushButton:hover   { background-color: #dc2626; }
-                    QPushButton:pressed { background-color: #dc2626; }
-                """)
-            self.btn_level.clicked.connect(self.level)
-            x += 292
-            if i == 4:
-                y = 520
-                x = 0
-                y1 = 310
-            self.btn_levels.append(self.btn_level)
-            if i == 0:
-                self.btn_levels.append(self.icon1)
+            self.cheat_btn = QPushButton("Чит-код", self)
+            self.cheat_btn.setFixedSize(282, 80)
+            self.cheat_btn.move(292, 820)
+            self.cheat_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.cheat_btn.show()
+            self.cheat_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #ffd166;
+                    color: #1e3c72;
+                    font-size: 26px;
+                    font-weight: bold;
+                    border: none;
+                    border-radius: 40px;
+                }
+                QPushButton:hover   { background-color: #ffe08a; }
+                QPushButton:pressed { background-color: #e6b94a; }
+            """)
+            self.cheat_btn.clicked.connect(self.cheat)
+
+            self.bonus_btn = QPushButton("Казино", self)
+            self.bonus_btn.setFixedSize(282, 80)
+            self.bonus_btn.move(0, 820)
+            self.bonus_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.bonus_btn.show()
+            self.bonus_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #ffd166;
+                    color: #1e3c72;
+                    font-size: 26px;
+                    font-weight: bold;
+                    border: none;
+                    border-radius: 40px;
+                }
+                QPushButton:hover   { background-color: #ffe08a; }
+                QPushButton:pressed { background-color: #e6b94a; }
+            """)
+            self.bonus_btn.clicked.connect(self.casino)
+
+            x = 0
+            y = 220
+            y1 = 10
+            self.btn_levels = []
+            self.kek_pic = []
+            self.pic1 = ["icon.png", "quiz.jpg", "reaction.jpg", "human.jpg", "clicker.jpg", "snake.jpg"]
+
+            for i in range(10):
+                if i < 6:
+                    self.icon = QPixmap(self.pic1[i])
+                    self.icon6 = QLabel(self)
+                    self.icon6.move(x, y1)
+                    self.icon6.resize(270, 200)
+                    scaled = self.icon.scaled(
+                        282, 200,
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation
+                    )
+                    self.icon6.setPixmap(scaled)
+                    self.icon6.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                    self.icon6.setStyleSheet("""
+                        border: 2px solid #334155;
+                        border-radius: 8px;
+                        background-color: #1e293b;
+                        padding: 4px;
+                    """)
+                    self.icon6.show()
+                    self.kek_pic.append(self.icon6)
+
+                self.btn_level = QPushButton(f"Уровень: {i + 1}", self)
+                self.btn_level.setFixedSize(282, 80)
+                self.btn_level.move(x, y)
+                self.btn_level.setCursor(Qt.CursorShape.PointingHandCursor)
+                self.btn_level.show()
+
+                if self.level0 >= i + 1:
+                    self.btn_level.setStyleSheet("""
+                        QPushButton {
+                            background-color: #16a34a;
+                            color: #1e3c72;
+                            font-size: 26px;
+                            font-weight: bold;
+                            border: none;
+                            border-radius: 40px;
+                        }
+                        QPushButton:hover   { background-color: #16a34a; }
+                        QPushButton:pressed { background-color: #16a34a; }
+                    """)
+                else:
+                    self.btn_level.setStyleSheet("""
+                        QPushButton {
+                            background-color: #dc2626;
+                            color: #1e3c72;
+                            font-size: 26px;
+                            font-weight: bold;
+                            border: none;
+                            border-radius: 40px;
+                        }
+                        QPushButton:hover   { background-color: #dc2626; }
+                        QPushButton:pressed { background-color: #dc2626; }
+                    """)
+                self.btn_level.clicked.connect(self.level)
+
+                x += 292
+                if i == 4:
+                    y = 520
+                    x = 0
+                    y1 = 310
+
+                self.btn_levels.append(self.btn_level)
+        except Exception as e:
+            print(e)
 
     def casino(self):
         self.btn_profile.hide()
@@ -514,7 +516,7 @@ class Lobby(QWidget):
 
     def level(self):
         n = int(self.sender().text().split()[1])
-        if self.profile[self.login]["level"] >= n and n == 1:
+        if self.level0 >= n and n == 1:
             self.btn_profile.hide()
             self.btn_shop.hide()
             for i in self.kek_pic:
@@ -653,7 +655,7 @@ class Lobby(QWidget):
             for i in self.btn_levels:
                 i.hide()
 
-        elif self.profile[self.login]["level"] >= n and (n == 2 or n == 3 or n == 4 or n == 5 or n == 6):
+        elif self.level0 >= n and (n == 2 or n == 3 or n == 4 or n == 5 or n == 6):
             self.btn_profile.hide()
             self.btn_shop.hide()
             for i in self.kek_pic:
@@ -886,9 +888,9 @@ class Lobby(QWidget):
             QMessageBox.StandardButton.No
         )
         if answer == QMessageBox.StandardButton.Yes:
-            self.profile[self.login]["money"] = 9999999999
-            with open("info.json", "w") as f:
-                json.dump(self.profile, f)
+            self.money += 9999999999
+            self.cur.execute('''Update profile set money = ? where login = ?''', (self.money, self.login))
+            self.con.commit()
 
     def exit(self):
         self.close()
@@ -921,7 +923,7 @@ class Lobby(QWidget):
         self.shop_label.show()
         self.prof.append(self.shop_label)
 
-        self.balance_label = QLabel(f"Ваш баланс: {self.profile[self.login]["money"]} ฿", self)
+        self.balance_label = QLabel(f"Ваш баланс: {self.money} ฿", self)
         self.balance_label.move(10, 10)
         self.balance_label.resize(1000, 300)
         self.balance_label.setStyleSheet("""
@@ -1008,14 +1010,16 @@ class Lobby(QWidget):
 
     def buy(self):
         n = int(self.sender().text().split()[0])
-        if self.profile[self.login]["money"] >= n:
-            if self.pic_lst[self.price_pic.index(n)] not in self.profile[self.login]["pic"]:
+        if self.money >= n:
+            if self.pic_lst[self.price_pic.index(n)] not in self.pic:
                 QMessageBox.information(self, 'Покупка', 'Успешная покупка!')
-                self.profile[self.login]["money"] -= n
-                self.balance_label.setText(f"Ваш баланс: {self.profile[self.login]["money"]} ฿")
-                self.profile[self.login]["pic"].append(self.pic_lst[self.price_pic.index(n)])
-                with open('info.json', 'w') as f:
-                    json.dump(self.profile, f)
+                self.money -= n
+                self.balance_label.setText(f"Ваш баланс: {self.money} ฿")
+                n1 = json.loads(self.pic)
+                n1.append(self.pic_lst[self.price_pic.index(n)])
+                self.pic = json.dumps(n1)
+                self.cur.execute('UPDATE profile SET pic=?, money=? WHERE login=?', (self.pic, self.money, self.login))
+                self.con.commit()
             else:
                 QMessageBox.warning(self, 'Предупреждение', 'У вас уже есть эта наклейка')
         else:
@@ -1047,7 +1051,7 @@ class Lobby(QWidget):
         self.prof.append(self.image2)
         self.name_label = QLabel(self)
         self.name_label.move(650, 250)
-        self.name_label.setText(f"Имя: {self.profile[self.login]["surname"] + ' ' + self.profile[self.login]["name"]}")
+        self.name_label.setText(f"Имя: {self.surname + ' ' + self.name}")
         self.name_label.resize(1000, 60)
         self.name_label.setStyleSheet("""
             color: #d0e4ff;
@@ -1059,7 +1063,7 @@ class Lobby(QWidget):
 
         self.age_label = QLabel(self)
         self.age_label.move(650, 320)
-        self.age_label.setText(f"Лет: {self.profile[self.login]["age"]}")
+        self.age_label.setText(f"Лет: {self.age}")
         self.age_label.resize(1000, 60)
         self.age_label.setStyleSheet("""
             color: #d0e4ff;
@@ -1071,7 +1075,7 @@ class Lobby(QWidget):
 
         self.life_label = QLabel(self)
         self.life_label.move(650, 390)
-        self.life_label.setText(f"Страна: {self.profile[self.login]["country"]}")
+        self.life_label.setText(f"Страна: {self.country}")
         self.life_label.resize(1000, 60)
         self.life_label.setStyleSheet("""
             color: #d0e4ff;
@@ -1083,7 +1087,7 @@ class Lobby(QWidget):
 
         self.level_label = QLabel(self)
         self.level_label.move(650, 460)
-        self.level_label.setText(f"Уровень: {self.profile[self.login]["level"]}")
+        self.level_label.setText(f"Уровень: {self.level0}")
         self.level_label.resize(1000, 60)
         self.level_label.setStyleSheet("""
             color: #d0e4ff;
@@ -1095,7 +1099,7 @@ class Lobby(QWidget):
 
         self.ex_label = QLabel(self)
         self.ex_label.move(650, 530)
-        self.ex_label.setText(f"Опыт: {self.profile[self.login]["ex"]}")
+        self.ex_label.setText(f"Опыт: {self.ex}")
         self.ex_label.resize(1000, 60)
         self.ex_label.setStyleSheet("""
             color: #d0e4ff;
@@ -1119,7 +1123,7 @@ class Lobby(QWidget):
 
         self.password_label = QLabel(self)
         self.password_label.move(650, 670)
-        self.password_label.setText(f"Пароль: {self.profile[self.login]["password"]}")
+        self.password_label.setText(f"Пароль: {self.password}")
         self.password_label.resize(1000, 60)
         self.password_label.setStyleSheet("""
             color: #d0e4ff;
@@ -1131,7 +1135,7 @@ class Lobby(QWidget):
 
         self.money_label = QLabel(self)
         self.money_label.move(650, 740)
-        self.money_label.setText(f"Монет: {self.profile[self.login]["money"]} ฿")
+        self.money_label.setText(f"Монет: {self.money} ฿")
         self.money_label.resize(1000, 60)
         self.money_label.setStyleSheet("""
             color: #d0e4ff;
@@ -1142,7 +1146,8 @@ class Lobby(QWidget):
         self.prof.append(self.money_label)
         x = 50
         y = 50
-        for i, j in enumerate(self.profile[self.login]["pic"]):
+        n = json.loads(self.pic)
+        for i, j in enumerate(n):
             self.im = QPixmap(j)
             self.im2 = QLabel(self)
             self.im2.move(x, y)
@@ -1167,7 +1172,7 @@ class Lobby(QWidget):
                 x = 50
                 y += 200
 
-        self.btn_change = QPushButton("Поменять логин или пароль", self)
+        self.btn_change = QPushButton("Поменять пароль", self)
         self.btn_change.move(650, 820)
         self.btn_change.setFixedSize(400, 80)
         self.btn_change.setStyleSheet("""
@@ -1225,15 +1230,14 @@ class Lobby(QWidget):
         self.on_continue()
 
     def changeevent(self):
-        self.password_new, ok_pressed_password = QInputDialog.getText(
-            self, 'Знакомство', 'Введите новый пароль.'
-        )
-        if not ok_pressed_password or self.password_new == "":
+        password_new, ok_pressed_password = QInputDialog.getText(
+            self, 'Знакомство', 'Введите новый пароль.')
+        if not ok_pressed_password or password_new == "":
             return
-        self.profile[self.login]["password"] = self.password_new
-        self.password_label.setText(f"Пароль: {self.profile[self.login]["password"]}")
-        with open("info.json", "w") as f:
-            json.dump(self.profile, f)
+        self.password = password_new
+        self.password_label.setText(f"Пароль: {self.password}")
+        self.cur.execute("UPDATE profile SET password=? WHERE login=?", (self.password, self.login))
+        self.con.commit()
 
 
 class MainWindow(QMainWindow):
@@ -1286,12 +1290,12 @@ class MainWindow(QMainWindow):
         self.password_label.setStyleSheet("color: #cbd5e1; font-size: 14px;")
         self.box.append(self.password_label)
 
-        self.password = QLineEdit(self)
-        self.password.move(100, 230)
-        self.password.resize(200, 40)
-        self.password.setPlaceholderText("Введите пароль")
-        self.password.setEchoMode(QLineEdit.EchoMode.Password)
-        self.box.append(self.password)
+        self.password1 = QLineEdit(self)
+        self.password1.move(100, 230)
+        self.password1.resize(200, 40)
+        self.password1.setPlaceholderText("Введите пароль")
+        self.password1.setEchoMode(QLineEdit.EchoMode.Password)
+        self.box.append(self.password1)
 
         self.login_label = QLabel("Логин", self)
         self.login_label.resize(200, 40)
@@ -1299,11 +1303,11 @@ class MainWindow(QMainWindow):
         self.login_label.setStyleSheet("color: #cbd5e1; font-size: 14px;")
         self.box.append(self.login_label)
 
-        self.login = QLineEdit(self)
-        self.login.move(100, 170)
-        self.login.resize(200, 40)
-        self.login.setPlaceholderText("Введите логин")
-        self.box.append(self.login)
+        self.login1 = QLineEdit(self)
+        self.login1.move(100, 170)
+        self.login1.resize(200, 40)
+        self.login1.setPlaceholderText("Введите логин")
+        self.box.append(self.login1)
 
         self.pixmap_lock = QPixmap('lock.jpg')
         self.image_lock = QLabel(self)
@@ -1326,10 +1330,12 @@ class MainWindow(QMainWindow):
         self.error_label.hide()
 
     def entry(self):
-        with open("info.json", "r") as f:
-            a = json.load(f)
-        if self.login.text() in list(a.keys()):
-            if self.password.text() == a[self.login.text()]["password"]:
+        self.con = sqlite3.connect("proect.db")
+        self.cur = self.con.cursor()
+        res = self.cur.execute("""select * from profile where login = ?""", (self.login1.text(),)).fetchone()
+        if res:
+            self.login, self.password, self.name, self.surname, self.age, self.country, self.avatar, self.level0, self.ex, self.money, self.pic = res
+            if self.password1.text() == self.password:
                 for i in self.box:
                     i.hide()
                 self.error_label.hide()
@@ -1427,7 +1433,7 @@ class MainWindow(QMainWindow):
         if checked == 3:
             self.hide()
             self.flag = False
-            self.lobby = Lobby(self.flag, self.login.text())
+            self.lobby = Lobby(self.flag, self.login)
             self.lobby.show()
 
     def error(self):

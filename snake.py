@@ -1,3 +1,4 @@
+import sqlite3
 import sys
 import random
 
@@ -26,7 +27,6 @@ class SnakeGame(QWidget):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_game)
         self.timer.start(250)
-
 
     def initUI(self):
         self.setWindowTitle("🐍 Змейка")
@@ -171,6 +171,8 @@ class SnakeGame(QWidget):
 
         main_layout.addWidget(controls_frame)
 
+        bottom_layout = QHBoxLayout()
+
         self.restart_btn = QPushButton("🔄 Начать заново")
         self.restart_btn.setFixedHeight(50)
         self.restart_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -184,6 +186,7 @@ class SnakeGame(QWidget):
                 border-radius: 15px;
                 font-size: 18px;
                 font-weight: bold;
+                padding: 0 20px;
             }
             QPushButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
@@ -195,9 +198,53 @@ class SnakeGame(QWidget):
             }
         """)
         self.restart_btn.clicked.connect(self.restart_game)
-        main_layout.addWidget(self.restart_btn)
+        bottom_layout.addWidget(self.restart_btn)
+
+        self.btn_exit = QPushButton("🚪 Выйти в лобби")
+        self.btn_exit.setFixedHeight(50)
+        self.btn_exit.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.btn_exit.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_exit.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #dc2626, stop:1 #ef4444);
+                color: white;
+                border: none;
+                border-radius: 15px;
+                font-size: 18px;
+                font-weight: bold;
+                padding: 0 20px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #ef4444, stop:1 #f87171);
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #b91c1c, stop:1 #dc2626);
+            }
+        """)
+        self.btn_exit.clicked.connect(self.exit_to_lobby)
+        bottom_layout.addWidget(self.btn_exit)
+
+        main_layout.addLayout(bottom_layout)
 
         self.setFocus()
+
+    def exit_to_lobby(self):
+        if self.score >= 20:
+            con = sqlite3.connect('proect.db')
+            cur = con.cursor()
+            s = cur.execute("select level from profile where login=?", (self.login,)).fetchone()
+            if s[0] == 6:
+                cur.execute("update profile set level=? where login=?", (7, self.login))
+                con.commit()
+            con.close()
+        self.timer.stop()
+        self.close()
+        from proect import Lobby
+        self.lobby = Lobby(None, self.login)
+        self.lobby.show()
 
     def empty_cell_style(self):
         return """

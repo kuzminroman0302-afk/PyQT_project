@@ -1,4 +1,5 @@
 import json
+import sqlite3
 import sys
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QStackedWidget,
@@ -300,6 +301,7 @@ class History(QWidget):
         with open("info.json", "r") as f:
             prof = json.load(f)
 
+
         total = len(self.questions)
         percent = round(self.score / total * 100)
 
@@ -307,6 +309,10 @@ class History(QWidget):
             QMessageBox.information(self, 'Победа!', 'Поздравляю вы прошли второй уровень!\n'
                                                      'Вам начислено 30 ฿.\n'
                                                      'Ex + 15')
+            con = sqlite3.connect("proect.db")
+            cur = con.cursor()
+            s = cur.execute("SELECT * FROM questions WHERE correct=1;")
+            cur.execute("UPDATE profile SET money=?, ex=? WHERE id=?",)
             prof[self.login]["money"] += 30
             if prof[self.login]["level"] == 2:
                 prof[self.login]["level"] += 1
@@ -322,3 +328,9 @@ class History(QWidget):
         from proect import Lobby
         self.lobby = Lobby(None, self.login)
         self.lobby.show()
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    game = History("ads")
+    game.show()
+    sys.exit(app.exec())
