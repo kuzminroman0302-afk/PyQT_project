@@ -17,6 +17,7 @@ from words import HangmanGame
 from reaction import Reaction
 from snake import SnakeGame
 from casino import Casino
+from tetris import TetrisGame
 import random
 
 STYLE = """
@@ -432,10 +433,10 @@ class Lobby(QWidget):
             y1 = 10
             self.btn_levels = []
             self.kek_pic = []
-            self.pic1 = ["icon.png", "quiz.jpg", "reaction.jpg", "human.jpg", "clicker.jpg", "snake.jpg"]
+            self.pic1 = ["icon.png", "quiz.jpg", "reaction.jpg", "human.jpg", "clicker.jpg", "snake.jpg", "tetris.jpg"]
 
             for i in range(10):
-                if i < 6:
+                if i < 7:
                     self.icon = QPixmap(self.pic1[i])
                     self.icon6 = QLabel(self)
                     self.icon6.move(x, y1)
@@ -654,7 +655,7 @@ class Lobby(QWidget):
             for i in self.btn_levels:
                 i.hide()
 
-        elif self.level0 >= n and (n == 2 or n == 3 or n == 4 or n == 5 or n == 6):
+        elif self.level0 >= n and (2 <= n <= 7):
             self.btn_profile.hide()
             self.btn_shop.hide()
             for i in self.kek_pic:
@@ -685,6 +686,10 @@ class Lobby(QWidget):
                     self.level6 = SnakeGame(self.login)
                     self.hide()
                     self.level6.show()
+                if n == 7:
+                    self.level7 = TetrisGame(self.login)
+                    self.hide()
+                    self.level7.show()
 
             def info():
                 QMessageBox.information(self, "Информация",
@@ -737,101 +742,25 @@ class Lobby(QWidget):
                 QPushButton:pressed { background-color: #dc2626; }
             """)
             self.back_btn2.clicked.connect(back)
-            if n == 2:
-                self.icon2 = QPixmap("quiz.jpg")
-                self.icon12 = QLabel(self)
-                self.icon12.move(550, 450)
-                self.icon12.resize(400, 400)
-                scaled = self.icon2.scaled(
-                    400, 400,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-                self.icon12.setPixmap(scaled)
-                self.icon12.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                self.icon12.setStyleSheet("""
-                    border: 2px solid #334155;
-                    border-radius: 8px;
-                    background-color: #1e293b;
-                    padding: 4px;
-                """)
-                self.icon12.show()
-            elif n == 3:
-                self.icon2 = QPixmap("reaction.jpg")
-                self.icon12 = QLabel(self)
-                self.icon12.move(550, 450)
-                self.icon12.resize(400, 400)
-                scaled = self.icon2.scaled(
-                    400, 400,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-                self.icon12.setPixmap(scaled)
-                self.icon12.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                self.icon12.setStyleSheet("""
-                                border: 2px solid #334155;
-                                border-radius: 8px;
-                                background-color: #1e293b;
-                                padding: 4px;
-                            """)
-                self.icon12.show()
-            elif n == 4:
-                self.icon2 = QPixmap("human.jpg")
-                self.icon12 = QLabel(self)
-                self.icon12.move(550, 450)
-                self.icon12.resize(400, 400)
-                scaled = self.icon2.scaled(
-                    400, 400,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-                self.icon12.setPixmap(scaled)
-                self.icon12.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                self.icon12.setStyleSheet("""
-                                border: 2px solid #334155;
-                                border-radius: 8px;
-                                background-color: #1e293b;
-                                padding: 4px;
-                            """)
-                self.icon12.show()
-            elif n == 5:
-                self.icon2 = QPixmap("clicker.jpg")
-                self.icon12 = QLabel(self)
-                self.icon12.move(550, 450)
-                self.icon12.resize(400, 400)
-                scaled = self.icon2.scaled(
-                    400, 400,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-                self.icon12.setPixmap(scaled)
-                self.icon12.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                self.icon12.setStyleSheet("""
-                                border: 2px solid #334155;
-                                border-radius: 8px;
-                                background-color: #1e293b;
-                                padding: 4px;
-                            """)
-                self.icon12.show()
-            elif n == 6:
-                self.icon2 = QPixmap("snake.jpg")
-                self.icon12 = QLabel(self)
-                self.icon12.move(550, 450)
-                self.icon12.resize(400, 400)
-                scaled = self.icon2.scaled(
-                    400, 400,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-                self.icon12.setPixmap(scaled)
-                self.icon12.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                self.icon12.setStyleSheet("""
-                                border: 2px solid #334155;
-                                border-radius: 8px;
-                                background-color: #1e293b;
-                                padding: 4px;
-                            """)
-                self.icon12.show()
+
+            self.icon2 = QPixmap(self.pic1[n - 1])
+            self.icon12 = QLabel(self)
+            self.icon12.move(550, 450)
+            self.icon12.resize(400, 400)
+            scaled = self.icon2.scaled(
+                400, 400,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+            self.icon12.setPixmap(scaled)
+            self.icon12.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.icon12.setStyleSheet("""
+                border: 2px solid #334155;
+                border-radius: 8px;
+                background-color: #1e293b;
+                padding: 4px;
+            """)
+            self.icon12.show()
 
 
             self.start_btn2 = QPushButton("НАЧАТЬ", self)

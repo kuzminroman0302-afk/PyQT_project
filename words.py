@@ -1,9 +1,10 @@
+import sqlite3
 import sys
 import random
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QGridLayout, QMessageBox, QLineEdit
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QColor, QPainter, QPen
 
 
@@ -53,6 +54,7 @@ class HangmanGame(QWidget):
     def __init__(self, login):
         super().__init__()
         self.login = login
+        self.winner = False
         self.words = [
             ("ПРОГРАММА", "Код, который выполняется на компьютере"),
             ("КОМПЬЮТЕР", "Электронная вычислительная машина"),
@@ -150,7 +152,7 @@ class HangmanGame(QWidget):
         self.new_game_btn.clicked.connect(self.start_new_game)
         right_layout.addWidget(self.new_game_btn)
 
-        self.exit_btn = QPushButton("🔄 Новая игра")
+        self.exit_btn = QPushButton("🚪 Выйти")
         self.exit_btn.setFixedHeight(60)
         self.exit_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.exit_btn.clicked.connect(self.exit)
@@ -204,6 +206,21 @@ class HangmanGame(QWidget):
         main_layout.addLayout(keyboard_layout)
 
     def exit(self):
+        if self.winner:
+            self.timer.stop()
+            con = sqlite3.connect("proect.db")
+            cur = con.cursor()
+            money, ex, level = cur.execute("SELECT money, ex, level FROM profile WHERE login=?",
+                                           (self.login,)).fetchone()
+            if level == 4:
+                level += 1
+            cur.execute("update profile set money=?, ex=?, level=? WHERE login=?",
+                        (money + 35, ex + 20, level, self.login))
+            con.commit()
+            con.close()
+        from proect import Lobby
+        self.lobby = Lobby(None, self.login)
+        self.lobby.show()
         self.close()
 
     def start_new_game(self):
@@ -315,6 +332,10 @@ class HangmanGame(QWidget):
             for btn in self.buttons.values():
                 btn.setEnabled(False)
             QMessageBox.information(self, "🎉 Победа!", f"Вы угадали слово: {self.current_word}")
+            self.winner = True
+            self.timer = QTimer(self)
+            self.timer.timeout.connect(self.exit)
+            self.timer.start(1000)
 
     def check_lose(self):
         if self.errors >= self.max_errors:

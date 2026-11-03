@@ -1,11 +1,11 @@
 import sqlite3
 import sys
 import random
-from logging import exception
 
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QGridLayout, QFrame)
+    QGridLayout, QFrame, QGraphicsDropShadowEffect)
 from PyQt6.QtCore import Qt, QTimer
 
 
@@ -20,74 +20,118 @@ class Second_window(QWidget):
 
     def initUI(self):
         self.setWindowTitle("🏆 Победа!")
-        self.setFixedSize(700, 520)
+        self.setFixedSize(700, 650)
 
         self.setStyleSheet("""
             QWidget {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
                                             stop:0 #0b0f19, stop:1 #1e293b);
                 font-family: 'Segoe UI', Arial, sans-serif;
-                color: #e2e8f0;
+                color: #ffffff;
             }
             QLabel { background: transparent; }
         """)
 
         main = QVBoxLayout(self)
-        main.setContentsMargins(40, 40, 40, 40)
-        main.setSpacing(20)
+        main.setContentsMargins(40, 30, 40, 30)
+        main.setSpacing(15)
 
         cup = QLabel("🏆")
         cup.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        cup.setStyleSheet("font-size: 90px;")
+        cup.setStyleSheet("font-size: 80px;")
         main.addWidget(cup)
 
         title = QLabel("Поздравляем!")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setMinimumHeight(60)
         title.setStyleSheet("""
-            color: #fbbf24;
+            color: #FFD700;
             font-size: 42px;
-            font-weight: bold;
+            font-weight: 900;
+            letter-spacing: 2px;
         """)
+        title_shadow = QGraphicsDropShadowEffect()
+        title_shadow.setBlurRadius(20)
+        title_shadow.setColor(QColor(255, 215, 0, 180))
+        title_shadow.setOffset(0, 0)
+        title.setGraphicsEffect(title_shadow)
         main.addWidget(title)
 
         subtitle = QLabel("Вы прошли уровень «Реакция»!")
         subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        subtitle.setStyleSheet("color: #38ef7d; font-size: 22px;")
+        subtitle.setMinimumHeight(30)
+        subtitle.setStyleSheet("""
+            color: #ffffff; 
+            font-size: 20px; 
+            font-weight: bold;
+        """)
         main.addWidget(subtitle)
 
         stats_frame = QFrame()
         stats_frame.setStyleSheet("""
             QFrame {
-                background: rgba(30, 41, 59, 0.85);
+                background: rgba(15, 23, 42, 0.9);
                 border: 2px solid #00e5ff;
                 border-radius: 20px;
             }
         """)
         stats_layout = QVBoxLayout(stats_frame)
-        stats_layout.setContentsMargins(30, 20, 30, 20)
-        stats_layout.setSpacing(10)
+        stats_layout.setContentsMargins(20, 20, 20, 20)
+        stats_layout.setSpacing(15)
 
         stats_title = QLabel("📊 Ваш результат")
         stats_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        stats_title.setStyleSheet("color: #00e5ff; font-size: 20px; font-weight: bold;")
+        stats_title.setMinimumHeight(30)
+        stats_title.setStyleSheet("""
+            color: #00e5ff; 
+            font-size: 22px; 
+            font-weight: bold;
+        """)
         stats_layout.addWidget(stats_title)
 
         score_lbl = QLabel(f"✅ Очки: {self.score}")
         score_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        score_lbl.setStyleSheet("color: #38ef7d; font-size: 22px; font-weight: bold;")
+        score_lbl.setMinimumHeight(35)
+        score_lbl.setStyleSheet("""
+            color: #38ef7d; 
+            font-size: 24px; 
+            font-weight: bold;
+        """)
         stats_layout.addWidget(score_lbl)
 
         miss_lbl = QLabel(f"❌ Промахи: {self.misses}")
         miss_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        miss_lbl.setStyleSheet("color: #ef4444; font-size: 22px; font-weight: bold;")
+        miss_lbl.setMinimumHeight(35)
+        miss_lbl.setStyleSheet("""
+            color: #ef4444; 
+            font-size: 24px; 
+            font-weight: bold;
+        """)
         stats_layout.addWidget(miss_lbl)
+
+        reward_frame = QFrame()
+        reward_frame.setMinimumHeight(60)
+        reward_frame.setStyleSheet("""
+            QFrame {
+                background: rgba(251, 191, 36, 0.15);
+                border: 2px dashed #fbbf24;
+                border-radius: 15px;
+            }
+        """)
+        reward_layout = QVBoxLayout(reward_frame)
 
         reward_lbl = QLabel("💰 Награда: +30 ฿  |  ⭐ Ex +15")
         reward_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        reward_lbl.setStyleSheet("color: #fbbf24; font-size: 20px; font-weight: bold;")
-        stats_layout.addWidget(reward_lbl)
+        reward_lbl.setStyleSheet("""
+            color: #fbbf24; 
+            font-size: 22px; 
+            font-weight: bold;
+        """)
+        reward_layout.addWidget(reward_lbl)
 
+        stats_layout.addWidget(reward_frame)
         main.addWidget(stats_frame)
+
         main.addStretch()
 
         btn_layout = QHBoxLayout()
@@ -104,7 +148,7 @@ class Second_window(QWidget):
                 color: white;
                 border: none;
                 border-radius: 15px;
-                font-size: 20px;
+                font-size: 22px;
                 font-weight: bold;
             }
             QPushButton:hover {
@@ -126,6 +170,7 @@ class Second_window(QWidget):
         self.lobby = Lobby(None, self.login)
         self.lobby.show()
         self.close()
+
 
 class Reaction(QWidget):
     def __init__(self, login):
@@ -233,22 +278,21 @@ class Reaction(QWidget):
 
     def win(self):
         if self.score == 1 and self.misses == 0:
-            try:
-                print(self.login)
-                con = sqlite3.connect("proect.db")
-                cur = con.cursor()
-                money, ex, level = cur.execute("SELECT money, ex, level FROM profile WHERE login=?", (self.login,)).fetchone()
-                if level == 3:
-                    level += 1
-                cur.execute("update profile set money=?, ex=?, level=? WHERE login=?", (money + 30, ex + 15, level, self.login))
-                con.commit()
-                con.close()
+            con = sqlite3.connect("proect.db")
+            cur = con.cursor()
+            money, ex, level = cur.execute("SELECT money, ex, level FROM profile WHERE login=?",
+                                           (self.login,)).fetchone()
+            if level == 3:
+                level += 1
+            cur.execute("update profile set money=?, ex=?, level=? WHERE login=?",
+                        (money + 30, ex + 15, level, self.login))
+            con.commit()
+            con.close()
+            self.close()
+            self.a = Second_window(self.login, self.score, self.misses)
+            self.a.show()
+            self.timer.stop()
 
-                self.a = Second_window(self.login, self.score, self.misses)
-                self.a.show()
-                self.timer.stop()
-            except Exception as e:
-                print(e)
     def _btn_green_style(self):
         return """
             QPushButton {
@@ -276,7 +320,6 @@ class Reaction(QWidget):
             j[1] = "green"
             j[2] = False
 
-
         if self.time == 3:
             red_indices = [1, 2, 3, 8, 11, 12, 13, 18, 21, 22, 23]
         elif self.time == 2:
@@ -294,7 +337,6 @@ class Reaction(QWidget):
             self.stage_label.setText(f"Этап: {4 - self.time} / 4")
         self.time -= 1
         self.win()
-
 
     def click(self, ind):
         if self.buttons[ind][2] is False and self.time < 0:

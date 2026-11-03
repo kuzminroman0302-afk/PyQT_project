@@ -235,10 +235,11 @@ class SnakeGame(QWidget):
         if self.score >= 20:
             con = sqlite3.connect('proect.db')
             cur = con.cursor()
-            s = cur.execute("select level from profile where login=?", (self.login,)).fetchone()
-            if s[0] == 6:
-                cur.execute("update profile set level=? where login=?", (7, self.login))
-                con.commit()
+            level, ex, money = cur.execute("select level, ex, money from profile where login=?", (self.login,)).fetchone()
+            if level == 6:
+                level += 1
+            cur.execute("update profile set level=?, ex=?, money=? where login=?", (level, ex + 20, money + 40, self.login))
+            con.commit()
             con.close()
         self.timer.stop()
         self.close()

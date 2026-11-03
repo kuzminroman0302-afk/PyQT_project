@@ -1,4 +1,5 @@
 import json
+import sqlite3
 import sys
 import random
 
@@ -147,9 +148,12 @@ class Casino(QWidget):
         super().__init__()
         self.login = login
         self.count = 0
-        with open("info.json", "r") as f:
-            self.prof = json.load(f)
-            self.balance = self.prof[login]["money"]
+        con = sqlite3.connect("proect.db")
+        cur = con.cursor()
+        money = cur.execute("SELECT money FROM profile where login = ?", (self.login,)).fetchone()
+        con.close()
+
+        self.balance = int(money[0])
         self.bet = 0
         self.user_choice = None
 
@@ -252,9 +256,11 @@ class Casino(QWidget):
 
     def exit(self):
         from proect import Lobby
-        with open("info.json", "w") as f:
-            self.prof[self.login]["money"] = self.balance
-            json.dump(self.prof, f)
+        con = sqlite3.connect("proect.db")
+        cur = con.cursor()
+        cur.execute("UPDATE profile SET money=? WHERE login = ?", (self.balance, self.login))
+        con.commit()
+        con.close()
         self.close()
         self.lobby = Lobby(None, self.login)
         self.lobby.show()
