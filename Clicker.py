@@ -139,7 +139,7 @@ class ClickerUI(QWidget):
         if res is None:
             cur.execute("""INSERT INTO Clicker(login, money, autoclicker, mull, critical, click, one, two, three, four, five)
             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                        (self.login, 100000000, 0, 1, 0, 1, 0, 0, 0, 0, 0))
+                        (self.login, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0))
             self.con.commit()
             res = cur.execute("SELECT * FROM Clicker WHERE login = ?", (self.login,)).fetchone()
 

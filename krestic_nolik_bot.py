@@ -6,6 +6,7 @@ from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QApplication, QWidget, QRadioButton, QPushButton, QLabel, QLineEdit, QLCDNumber, QMessageBox
 import random
 
+
 class TicTacToe_bot(QWidget):
     def __init__(self, login):
         super().__init__()
@@ -91,7 +92,6 @@ class TicTacToe_bot(QWidget):
         self.lobby = Lobby(None, self.login)
         self.lobby.show()
 
-
     def clic(self, i, j):
         self.flag = False
         btn = self.button_grid[i][j]
@@ -101,6 +101,7 @@ class TicTacToe_bot(QWidget):
         btn.setText(self.pl)
         self.check()
         if self.mb_win() is not None:
+            print(self.mb_win())
             y, x = self.mb_win()
             btn = self.button_grid[y][x]
             if self.pl == "X":
@@ -124,7 +125,8 @@ class TicTacToe_bot(QWidget):
     def win_user(self):
         con = sqlite3.connect("proect.db")
         cur = con.cursor()
-        name, surname, level, money, ex = cur.execute("select name, surname, level, money, ex from profile where login=?", (self.login,)).fetchone()
+        name, surname, level, money, ex = cur.execute(
+            "select name, surname, level, money, ex from profile where login=?", (self.login,)).fetchone()
 
         self.result.setText(f"Выиграл {surname + " " + name}!")
         self.result.resize(500, 80)
@@ -170,19 +172,21 @@ class TicTacToe_bot(QWidget):
 
     def mb_win(self):
         all = [[i.text() for i in self.button_grid[0]], [i.text() for i in self.button_grid[1]],
-             [i.text() for i in self.button_grid[2]]]
+               [i.text() for i in self.button_grid[2]]]
         for i in range(len(all)):
             prom = ''
             for j in range(len(all[i])):
                 prom += all[i][j]
-            if (prom.count('X') == 2 and self.pl == 'X' and " " in prom) or (prom.count('O') == 2 and self.pl == 'O' and " " in prom):
+            if (prom.count('X') == 2 and self.pl == 'X' and " " in prom) or (
+                    prom.count('O') == 2 and self.pl == 'O' and " " in prom):
                 return i, prom.index(' ')
 
         for i in range(3):
             prom = ''
             for j in range(3):
                 prom += self.button_grid[j][i].text()
-            if (prom.count('X') == 2 and self.pl == 'X' and " " in prom) or (prom.count('O') == 2 and self.pl == 'O' and " " in prom):
+            if (prom.count('X') == 2 and self.pl == 'X' and " " in prom) or (
+                    prom.count('O') == 2 and self.pl == 'O' and " " in prom):
                 return prom.index(' '), i
 
         left = self.button_grid[0][0].text() + self.button_grid[1][1].text() + self.button_grid[2][2].text()
@@ -248,7 +252,7 @@ class TicTacToe_bot(QWidget):
 
     def win(self):
         all = [[i.text() for i in self.button_grid[0]], [i.text() for i in self.button_grid[1]],
-             [i.text() for i in self.button_grid[2]]]
+               [i.text() for i in self.button_grid[2]]]
         vertikal = []
         for i in range(3):
             prom = []
@@ -266,3 +270,10 @@ class TicTacToe_bot(QWidget):
         elif ['O', 'O', 'O'] in all:
             return "O"
         return True
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    game = TicTacToe_bot("aaf")
+    game.show()
+    sys.exit(app.exec())

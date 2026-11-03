@@ -56,14 +56,14 @@ class HangmanGame(QWidget):
         self.login = login
         self.winner = False
         self.words = [
-            ("ПРОГРАММА", "Код, который выполняется на компьютере"),
-            ("КОМПЬЮТЕР", "Электронная вычислительная машина"),
-            ("КЛАВИАТУРА", "Устройство ввода текста"),
-            ("МОНИТОР", "Устройство вывода изображения"),
-            ("АЛГОРИТМ", "Последовательность действий для решения задачи"),
-            ("ПИТОН", "Язык программирования"),
-            ("ИНТЕРНЕТ", "Всемирная сеть"),
-            ("КРИСТАЛЛ", "То, что мы добываем в кликере"),
+            ("ПРОГРАММА", ""),
+            ("КОМПЬЮТЕР", ""),
+            ("КЛАВИАТУРА", ""),
+            ("МОНИТОР", ""),
+            ("АЛГОРИТМ", ""),
+            ("ПИТОН", ""),
+            ("ИНТЕРНЕТ", ""),
+            ("КРИСТАЛЛ", ""),
         ]
         self.current_word = ""
         self.hint = ""
@@ -228,7 +228,7 @@ class HangmanGame(QWidget):
         self.guessed_letters = set()
         self.errors = 0
         self.gallows.set_errors(0)
-        self.hint_label.setText(f"💡 {self.hint}")
+        self.hint_label.setText(f"{self.hint}")
         self.errors_label.setText("Ошибок: 0 / 6")
 
         for inp in self.letter_inputs:

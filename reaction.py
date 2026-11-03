@@ -277,7 +277,7 @@ class Reaction(QWidget):
         main_layout.addLayout(bottom_layout)
 
     def win(self):
-        if self.score == 1 and self.misses == 0:
+        if self.score == 10 and self.misses == 0:
             con = sqlite3.connect("proect.db")
             cur = con.cursor()
             money, ex, level = cur.execute("SELECT money, ex, level FROM profile WHERE login=?",
@@ -364,6 +364,6 @@ class Reaction(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    game = Reaction()
+    game = Reaction("aaf")
     game.show()
     sys.exit(app.exec())
