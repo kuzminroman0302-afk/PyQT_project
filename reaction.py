@@ -183,7 +183,7 @@ class Reaction(QWidget):
         self.login = login
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.tick)
-        self.timer.start(750)
+        self.timer.start(2000)
 
     def initUI(self):
         self.setWindowTitle("🎯 Реакция: Найди красную кнопку!")
@@ -277,7 +277,7 @@ class Reaction(QWidget):
         main_layout.addLayout(bottom_layout)
 
     def win(self):
-        if self.score == 10 and self.misses == 0:
+        if self.score == 1 and self.misses == 0:
             con = sqlite3.connect("proect.db")
             cur = con.cursor()
             money, ex, level = cur.execute("SELECT money, ex, level FROM profile WHERE login=?",
@@ -359,7 +359,7 @@ class Reaction(QWidget):
         for i, j in enumerate(self.buttons):
             j[0].setStyleSheet(self._btn_green_style())
             j[1] = "green"
-        self.timer.start(750)
+        self.timer.start(4000)
 
 
 if __name__ == "__main__":
