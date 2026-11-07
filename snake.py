@@ -2,11 +2,12 @@ import sqlite3
 import sys
 import random
 
+from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QFrame, QGraphicsDropShadowEffect
 )
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QColor
 
 
@@ -22,6 +23,22 @@ class SnakeGame(QWidget):
         self.score = 0
         self.game_over = False
 
+        self.audio_output = QAudioOutput()
+        self.snake1 = QMediaPlayer()
+        self.snake1.setAudioOutput(self.audio_output)
+        self.snake1.setSource(QUrl.fromLocalFile("snake.mp3"))
+        self.snake1.setLoops(QMediaPlayer.Loops.Infinite)
+        self.audio_output.setVolume(0.05)
+
+        self.apple_eat = QSoundEffect()
+        self.apple_eat.setSource(QUrl.fromLocalFile("eat.wav"))
+        self.apple_eat.setVolume(0.07)
+
+        self.over = QSoundEffect()
+        self.over.setSource(QUrl.fromLocalFile("over.wav"))
+        self.over.setVolume(0.3)
+
+
         self.initUI()
 
         self.timer = QTimer(self)
@@ -31,6 +48,7 @@ class SnakeGame(QWidget):
     def initUI(self):
         self.setWindowTitle("🐍 Змейка")
         self.setFixedSize(1000, 900)
+        self.snake1.play()
 
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -232,6 +250,7 @@ class SnakeGame(QWidget):
         self.setFocus()
 
     def exit_to_lobby(self):
+        self.snake1.stop()
         if self.score >= 20:
             con = sqlite3.connect('proect.db')
             cur = con.cursor()
@@ -307,6 +326,7 @@ class SnakeGame(QWidget):
         self.snake[0][1] = new_y
 
         if self.snake[0] == self.apple:
+            self.apple_eat.play()
             self.snake.append(list(old_snake[-1]))
             self.apple = [random.randint(0, 19), random.randint(0, 19)]
             self.score += 1
@@ -330,6 +350,7 @@ class SnakeGame(QWidget):
                 self.buttons[y][x].setStyleSheet(self.body_style(idx, total))
 
     def end_game(self):
+        self.over.play()
         self.timer.stop()
         self.status_label.setText("💀 Игра окончена")
         self.status_label.setStyleSheet("color: #ef4444; font-size: 18px; font-weight: bold;")

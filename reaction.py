@@ -3,23 +3,25 @@ import sys
 import random
 
 from PyQt6.QtGui import QColor
+from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QGridLayout, QFrame, QGraphicsDropShadowEffect)
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QUrl
 
 
 class Second_window(QWidget):
-    def __init__(self, login, score=0, misses=0, parent=None):
+    def __init__(self, login, score=0, misses=0, n=1, parent=None):
         super().__init__()
         self.login = login
         self.score = score
         self.misses = misses
+        self.text = "Поражение" if not n else "🏆 Победа!"
         self.parent_window = parent
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle("🏆 Победа!")
+        self.setWindowTitle(self.text)
         self.setFixedSize(700, 650)
 
         self.setStyleSheet("""
@@ -36,12 +38,7 @@ class Second_window(QWidget):
         main.setContentsMargins(40, 30, 40, 30)
         main.setSpacing(15)
 
-        cup = QLabel("🏆")
-        cup.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        cup.setStyleSheet("font-size: 80px;")
-        main.addWidget(cup)
-
-        title = QLabel("Поздравляем!")
+        title = QLabel(self.text)
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title.setMinimumHeight(60)
         title.setStyleSheet("""
@@ -119,17 +116,17 @@ class Second_window(QWidget):
             }
         """)
         reward_layout = QVBoxLayout(reward_frame)
+        if self.text == "🏆 Победа!":
+            reward_lbl = QLabel("💰 Награда: +30 ฿  |  ⭐ Ex +15")
+            reward_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            reward_lbl.setStyleSheet("""
+                color: #fbbf24; 
+                font-size: 22px; 
+                font-weight: bold;
+            """)
+            reward_layout.addWidget(reward_lbl)
 
-        reward_lbl = QLabel("💰 Награда: +30 ฿  |  ⭐ Ex +15")
-        reward_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        reward_lbl.setStyleSheet("""
-            color: #fbbf24; 
-            font-size: 22px; 
-            font-weight: bold;
-        """)
-        reward_layout.addWidget(reward_lbl)
-
-        stats_layout.addWidget(reward_frame)
+            stats_layout.addWidget(reward_frame)
         main.addWidget(stats_frame)
 
         main.addStretch()
@@ -181,9 +178,28 @@ class Reaction(QWidget):
         self.misses = 0
         self.initUI()
         self.login = login
+
+        self.audio_output = QAudioOutput()
+        self.player1 = QMediaPlayer()
+        self.player1.setAudioOutput(self.audio_output)
+        self.player1.setSource(QUrl.fromLocalFile("reaction.mp3"))
+        self.player1.setLoops(QMediaPlayer.Loops.Infinite)
+        self.audio_output.setVolume(0.5)
+
+        if self.player1.isAvailable():
+            self.player1.play()
+
+        self.suc_click = QSoundEffect()
+        self.suc_click.setSource(QUrl.fromLocalFile("buy.wav"))
+        self.suc_click.setVolume(0.4)
+
+        self.eror_click = QSoundEffect()
+        self.eror_click.setSource(QUrl.fromLocalFile("eror.wav"))
+        self.eror_click.setVolume(0.4)
+
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.tick)
-        self.timer.start(2000)
+        self.timer.start(750)
 
     def initUI(self):
         self.setWindowTitle("🎯 Реакция: Найди красную кнопку!")
@@ -277,21 +293,30 @@ class Reaction(QWidget):
         main_layout.addLayout(bottom_layout)
 
     def win(self):
-        if self.score == 1 and self.misses == 0:
-            con = sqlite3.connect("proect.db")
-            cur = con.cursor()
-            money, ex, level = cur.execute("SELECT money, ex, level FROM profile WHERE login=?",
-                                           (self.login,)).fetchone()
-            if level == 3:
-                level += 1
-            cur.execute("update profile set money=?, ex=?, level=? WHERE login=?",
-                        (money + 30, ex + 15, level, self.login))
-            con.commit()
-            con.close()
-            self.close()
-            self.a = Second_window(self.login, self.score, self.misses)
-            self.a.show()
+        if (self.score == 20 and self.misses == 0) or self.misses == 1:
             self.timer.stop()
+            self.player1.stop()
+
+            if self.misses == 1:
+                n = 0
+            else:
+                n = 1
+
+            if n == 1:
+                con = sqlite3.connect("proect.db")
+                cur = con.cursor()
+                money, ex, level = cur.execute("SELECT money, ex, level FROM profile WHERE login=?",
+                                               (self.login,)).fetchone()
+                if level == 3:
+                    level += 1
+                cur.execute("UPDATE profile SET money=?, ex=?, level=? WHERE login=?",
+                            (money + 30, ex + 15, level, self.login))
+                con.commit()
+                con.close()
+
+            self.close()
+            self.a = Second_window(self.login, self.score, self.misses, n)
+            self.a.show()
 
     def _btn_green_style(self):
         return """
@@ -331,8 +356,8 @@ class Reaction(QWidget):
 
         for i in red_indices:
             self.buttons[i][0].setStyleSheet(self._btn_red_style())
-
             self.buttons[i][1] = "red"
+
         if self.time >= 0:
             self.stage_label.setText(f"Этап: {4 - self.time} / 4")
         self.time -= 1
@@ -341,10 +366,12 @@ class Reaction(QWidget):
     def click(self, ind):
         if self.buttons[ind][2] is False and self.time < 0:
             if self.buttons[ind][1] == "red":
+                self.suc_click.play()
                 self.score += 1
                 self.score_label.setText(f"Очки: {self.score}")
                 self.buttons[ind][2] = True
             else:
+                self.eror_click.play()
                 self.misses += 1
                 self.miss_label.setText(f"Промахи: {self.misses}")
                 self.buttons[ind][2] = True
@@ -359,7 +386,10 @@ class Reaction(QWidget):
         for i, j in enumerate(self.buttons):
             j[0].setStyleSheet(self._btn_green_style())
             j[1] = "green"
-        self.timer.start(4000)
+            j[2] = False
+        if not self.player1.isAvailable():
+            self.player1.play()
+        self.timer.start(750)
 
 
 if __name__ == "__main__":

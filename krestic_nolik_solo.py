@@ -1,5 +1,7 @@
 import sys
 
+from PyQt6.QtCore import QUrl
+from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
 from PyQt6.QtWidgets import QApplication, QWidget, QRadioButton, QPushButton, QLabel, QLineEdit, QLCDNumber
 
 class TicTacToe_friend(QWidget):
@@ -10,9 +12,20 @@ class TicTacToe_friend(QWidget):
         self.pl = 'X'
         self.v = True
         self.r = True
+        self.audio_output = QAudioOutput()
+        self.player = QMediaPlayer()
+        self.player.setAudioOutput(self.audio_output)
+        self.player.setSource(QUrl.fromLocalFile("bot.mp3"))
+        self.player.setLoops(QMediaPlayer.Loops.Infinite)
+        self.audio_output.setVolume(0.2)
+
+        self.sound_click = QSoundEffect()
+        self.sound_click.setSource(QUrl.fromLocalFile("click.wav"))
+        self.sound_click.setVolume(0.2)
         self.initUI()
 
     def initUI(self):
+        self.player.play()
         self.setFixedSize(1540, 900)
         self.setWindowTitle('Крестики нолики')
         x = 500
@@ -82,6 +95,7 @@ class TicTacToe_friend(QWidget):
         """)
 
     def exit(self):
+        self.player.stop()
         from proect import Lobby
         self.close()
         self.lobby = Lobby(None, self.login)
@@ -89,6 +103,7 @@ class TicTacToe_friend(QWidget):
 
 
     def hello(self, i, j):
+        self.sound_click.play()
         btn = self.button_grid[i][j]
         if btn.text() != '' or self.v is False:
             return
@@ -163,7 +178,6 @@ class TicTacToe_friend(QWidget):
             for j in range(3):
                 d.append(self.button_grid[j][i].text())
             f.append(d)
-
         k.extend(f)
         b = [self.button_grid[0][0].text()] + [self.button_grid[1][1].text()] + [self.button_grid[2][2].text()]
         c = [self.button_grid[0][2].text()] + [self.button_grid[1][1].text()] + [self.button_grid[2][0].text()]
@@ -178,6 +192,6 @@ class TicTacToe_friend(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    ex = TicTacToe_friend()
+    ex = TicTacToe_friend("ff")
     ex.show()
     sys.exit(app.exec())

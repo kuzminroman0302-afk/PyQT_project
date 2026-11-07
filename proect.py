@@ -2,13 +2,15 @@ import json
 import sys
 import sqlite3
 
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QUrl
 
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QPixmap, QColor
+from PyQt6.QtMultimedia import QSoundEffect, QAudioOutput, QMediaPlayer
 from PyQt6.QtWidgets import (QApplication, QWidget, QRadioButton,
                              QPushButton, QLabel, QLineEdit,
                              QCheckBox, QMainWindow,
-                             QInputDialog, QHBoxLayout, QVBoxLayout, QMessageBox)
+                             QInputDialog, QHBoxLayout, QVBoxLayout, QMessageBox, QTableWidgetItem, QHeaderView,
+                             QTableWidget, QFrame, QGridLayout, QSpinBox, QComboBox, QFileDialog, QButtonGroup)
 from krestic_nolik_solo import TicTacToe_friend
 from krestic_nolik_bot import TicTacToe_bot
 from viktorina import History
@@ -18,6 +20,8 @@ from reaction import Reaction
 from snake import SnakeGame
 from casino import Casino
 from tetris import TetrisGame
+from paint import Paint
+from math_test import Math
 import random
 
 STYLE = """
@@ -89,136 +93,245 @@ class SecondWindow(QWidget):
         self.one = False
         self.avatar_choice = ''
         self.con = sqlite3.connect("proect.db")
+
+        self.avatar_group = QButtonGroup(self)
+
         self.initUI()
 
     def initUI(self):
-        self.setGeometry(300, 300, 800, 400)
         self.setWindowTitle('Регистрация')
-        self.setFixedSize(900, 400)
-        self.main = MainWindow()
-        self.login, ok_pressed_login = QInputDialog.getText(
-            self, 'Знакомство', 'Введите логин.'
-        )
-        cur = self.con.cursor()
-        s = cur.execute("select login from profile").fetchall()
-        self.users = []
-        for i in s:
-            self.users.append(i[0])
-        if self.login.strip() in self.users:
-            self.hide()
-            QMessageBox.warning(self, 'Предупреждение!', 'Такой логин уже существует!')
-            self.main.show()
-            return
-        self.password, ok_pressed_password = QInputDialog.getText(
-            self, 'Знакомство', 'Введите пароль.'
-        )
-        if not ok_pressed_login or not self.login.strip():
-            self.hide()
-            self.main.show()
-            return
-        if not ok_pressed_password or not self.password.strip():
-            self.hide()
-            self.main.show()
-            return
-        self.name, ok_pressed_name = QInputDialog.getText(
-            self, 'Знакомство', 'Как тебя зовут?'
-        )
-        self.surname, ok_pressed_surname = QInputDialog.getText(
-            self, 'Знакомство', 'Какая у тебя фамилия?'
-        )
-        self.age, ok_pressed_age = QInputDialog.getInt(
-            self, 'Возраст', 'Сколько тебе лет?', 18, 0, 100, 1
-        )
-        countries = ('Россия', 'Германия', 'США', 'Япония')
-        self.country, ok_pressed_country = QInputDialog.getItem(
-            self, 'Откуда ты?', 'Выбери страну:', countries, 0, False
-        )
+        self.setFixedSize(1540, 900)
 
-        if not ok_pressed_country or not ok_pressed_age or not ok_pressed_surname or not ok_pressed_name or not ok_pressed_password or not ok_pressed_login:
-            self.hide()
-            self.main = MainWindow()
-            self.main.show()
+        self.setStyleSheet("""
+               QWidget { background-color: #0f172a; color: #e2e8f0; font-family: 'Segoe UI'; }
+               QLabel { font-size: 16px; font-weight: 600; color: #cbd5e1; }
+               QLineEdit, QComboBox, QSpinBox {
+                   background-color: #1e293b; border: 2px solid #334155;
+                   border-radius: 8px; padding: 8px; font-size: 16px; color: #e2e8f0;
+               }
+               QLineEdit:focus, QComboBox:focus, QSpinBox:focus { border: 2px solid #38bdf8; }
+               QPushButton {
+                   background-color: #38bdf8; color: #0f172a;
+                   border: none; border-radius: 10px; font-size: 18px; font-weight: bold; padding: 12px;
+               }
+               QPushButton:hover { background-color: #7dd3fc; }
+               QPushButton:pressed { background-color: #0ea5e9; }
+               QRadioButton::indicator {
+                   width: 24px; height: 24px; border-radius: 12px;
+                   border: 2px solid #64748b; background: #1e293b;
+               }
+               QRadioButton::indicator:checked { background: #38bdf8; border: 2px solid #38bdf8; }
+           """)
+
+        main_layout = QHBoxLayout(self)
+        main_layout.setContentsMargins(50, 50, 50, 50)
+        main_layout.setSpacing(50)
+
+        form_layout = QVBoxLayout()
+        form_layout.setSpacing(10)
+
+        title = QLabel("Регистрация")
+        title.setStyleSheet("font-size: 36px; font-weight: bold; color: #ffffff; margin-bottom: 20px;")
+        form_layout.addWidget(title)
+
+        form_layout.addWidget(QLabel("Логин"))
+
+        self.login = QLabel("Логин не может быть пустым или занят", self)
+        self.login.setStyleSheet("font-size: 12px; color: #ef4444; font-weight: bold; margin-bottom: 2px;")
+        self.login.hide()
+        form_layout.addWidget(self.login)
+
+        self.edit_login = QLineEdit()
+        self.edit_login.setPlaceholderText("Введите логин")
+        form_layout.addWidget(self.edit_login)
+
+        form_layout.addWidget(QLabel("Пароль"))
+
+        self.password = QLabel("Обязательное поле", self)
+        self.password.setStyleSheet("font-size: 12px; color: #ef4444; font-weight: bold; margin-bottom: 2px;")
+        self.password.hide()
+        form_layout.addWidget(self.password)
+
+        self.edit_password = QLineEdit()
+        self.edit_password.setPlaceholderText("Введите пароль")
+        self.edit_password.setEchoMode(QLineEdit.EchoMode.Password)
+        form_layout.addWidget(self.edit_password)
+
+        form_layout.addWidget(QLabel("Имя"))
+
+        self.name = QLabel("Обязательное поле", self)
+        self.name.setStyleSheet("font-size: 12px; color: #ef4444; font-weight: bold; margin-bottom: 2px;")
+        self.name.hide()
+        form_layout.addWidget(self.name)
+
+        self.edit_name = QLineEdit()
+        self.edit_name.setPlaceholderText("Введите имя")
+        form_layout.addWidget(self.edit_name)
+
+        form_layout.addWidget(QLabel("Фамилия"))
+
+        self.surname = QLabel("Обязательное поле", self)
+        self.surname.setStyleSheet("font-size: 12px; color: #ef4444; font-weight: bold; margin-bottom: 2px;")
+        self.surname.hide()
+        form_layout.addWidget(self.surname)
+
+        self.edit_surname = QLineEdit()
+        self.edit_surname.setPlaceholderText("Введите фамилию")
+        form_layout.addWidget(self.edit_surname)
+
+        form_layout.addWidget(QLabel("Страна"))
+        self.combo_country = QComboBox()
+        self.combo_country.addItems([
+            "Россия", "Беларусь", "Казахстан", "Украина",
+            "Армения", "Грузия", "Узбекистан", "Другая"
+        ])
+        form_layout.addWidget(self.combo_country)
+
+        form_layout.addWidget(QLabel("Возраст"))
+        self.spin_age = QSpinBox()
+        self.spin_age.setRange(1, 120)
+        self.spin_age.setValue(18)
+        self.spin_age.setSuffix(" лет")
+        form_layout.addWidget(self.spin_age)
+
+        form_layout.addStretch()
+
+        self.btn_register = QPushButton("Зарегистрироваться")
+        self.btn_register.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_register.clicked.connect(self.on_register)
+        form_layout.addWidget(self.btn_register)
+
+        main_layout.addLayout(form_layout, stretch=1)
+
+        right_layout = QVBoxLayout()
+        right_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        title_av = QLabel("Выберите аватарку:")
+        title_av.setStyleSheet("font-size: 28px; font-weight: bold; color: #ffffff; margin-bottom: 20px;")
+        right_layout.addWidget(title_av)
+
+        avatar_grid = QGridLayout()
+        avatar_grid.setSpacing(20)
+
+        self.avatars_list = ["math.jpg", "rust.jpg", "bmw.jpg", "Lion.jpg"]
+
+        for i, j in enumerate(self.avatars_list):
+            row = i // 2
+            col = i % 2
+
+            cell_widget = QWidget()
+            cell_layout = QVBoxLayout(cell_widget)
+            cell_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+            pix = QPixmap(j)
+            lbl = QLabel()
+            lbl.setFixedSize(180, 180)
+            lbl.setPixmap(pix.scaled(180, 180, Qt.AspectRatioMode.KeepAspectRatio,
+                                     Qt.TransformationMode.SmoothTransformation))
+            lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lbl.setStyleSheet(
+                "border: 2px solid #334155; border-radius: 15px; background-color: #1e293b; padding: 5px;")
+            cell_layout.addWidget(lbl)
+
+            rad = QRadioButton()
+            rad.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.avatar_group.addButton(rad, i)
+            cell_layout.addWidget(rad, alignment=Qt.AlignmentFlag.AlignCenter)
+
+            avatar_grid.addWidget(cell_widget, row, col)
+
+        right_layout.addLayout(avatar_grid)
+
+        self.upload_layout = QHBoxLayout()
+        self.btn_choose = QPushButton("Загрузить свою")
+        self.btn_choose.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_choose.setStyleSheet("""
+               QPushButton { background-color: #8b5cf6; color: white; border-radius: 10px; font-size: 16px; }
+               QPushButton:hover { background-color: #a78bfa; }
+           """)
+        self.btn_choose.clicked.connect(self.ava)
+        self.upload_layout.addWidget(self.btn_choose)
+
+        self.lbl_custom = QLabel()
+        self.lbl_custom.setFixedSize(100, 100)
+        self.upload_layout.addWidget(self.lbl_custom)
+
+        right_layout.addLayout(self.upload_layout)
+
+        self.avatar_group.button(0).setChecked(True)
+
+        main_layout.addLayout(right_layout, stretch=1)
+
+        self.show()
+
+    def on_register(self):
+        self.cur = self.con.cursor()
+        all1 = self.cur.execute("select login from profile").fetchall()
+        all1 = [x[0] for x in all1]
+        flag = True
+        ava = None
+        for j, i in enumerate(self.avatar_group.buttons()):
+            if i.isChecked():
+                ava = self.avatars_list[j]
+        if not self.edit_login.text() or self.edit_login.text() in all1:
+            self.login.show()
+            flag = False
         else:
-            self.show()
+            self.login.hide()
 
-            self.choice_im = QLabel("Выбери аватарку:", self)
-            self.choice_im.resize(200, 40)
-            self.choice_im.move(400, 20)
-            self.choice_im.setStyleSheet(
-                "font-size: 20px; font-weight: bold; color: #f1f5f9;"
-            )
-            self.choice_im.show()
+        if not self.edit_password.text():
+            self.password.show()
+            flag = False
+        else:
+            self.password.hide()
 
-            self.avatar = ["math.jpg", "rust.jpg", "bmw.jpg", "Lion.jpg"]
-            self.avatar_ch = []
-            self.box_ch = []
-            x = 50
-            y = 100
-            x1 = 130
-            y1 = 320
+        if not self.edit_name.text():
+            self.name.show()
+            flag = False
+        else:
+            self.name.hide()
 
-            for j, i in enumerate(self.avatar):
-                self.image1 = QPixmap(i)
-                self.image2 = QLabel(self)
-                self.image2.move(x, y)
-                self.image2.resize(200, 200)
-                scaled = self.image1.scaled(
-                    200, 200,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-                self.image2.setPixmap(scaled)
-                self.image2.setStyleSheet("""
-                    border: 2px solid #334155;
-                    border-radius: 12px;
-                    background-color: #1e293b;
-                    padding: 4px;
-                """)
-                self.image2.show()
-                self.avatar_ch.append(self.image2)
+        if not self.edit_surname.text():
+            self.surname.show()
+            flag = False
+        else:
+            self.surname.hide()
 
-                self.rad = QRadioButton(self)
-                self.rad.move(x1, y1)
-                self.rad.setCursor(Qt.CursorShape.PointingHandCursor)
-                self.rad.show()
-                self.box_ch.append(self.rad)
+        if not flag:
+            return
 
-                x += 220
-                x1 += 220
+        lst = json.dumps([])
+        self.cur.execute("""INSERT INTO profile(login, password, name, surname, age, country, avatar, level, ex, money, pic)
+                    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (self.edit_login.text(), self.edit_password.text(), self.edit_name.text(), self.edit_surname.text(), int(self.spin_age.value()), self.combo_country.currentText(),
+                     ava, 1, 0, 0,
+                     lst))
+        self.con.commit()
+        self.con.close()
+        self.close()
+        self.lob = Lobby(True, self.edit_login.text())
+        self.lob.show()
 
-            self.choice_btn = QPushButton("Выбрать", self)
-            self.choice_btn.move(350, 350)
-            self.choice_btn.resize(200, 40)
-            self.choice_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.choice_btn.show()
-            self.choice_btn.clicked.connect(self.ava)
 
     def ava(self):
-        if self.ischeck() is not False:
-            if self.name.strip() == '':
-                self.name = "User" + str(len(self.users) + 1)
-            if self.surname.strip() == '':
-                self.surname = ""
-            self.avatar_choice = self.avatar[self.ischeck()]
-            self.hide()
-            self.flag = True
-            cur = self.con.cursor()
-            lst = json.dumps([])
-            cur.execute("""INSERT INTO profile(login, password, name, surname, age, country, avatar, level, ex, money, pic)
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                        (self.login, self.password, self.name, self.surname, int(self.age), self.country, self.avatar_choice, 1, 0, 0,
-                         lst))
-            self.con.commit()
+        file, ok = QFileDialog.getOpenFileName(
+            self, 'Выбери файл', '',
+            'Картинки (*.jpg *.png)')
+        if not ok or not file:
+            return  
 
+        pix = QPixmap(file)
+        self.custom_rad = QRadioButton()
+        self.avatar_group.addButton(self.custom_rad, 4)
+        self.upload_layout.addWidget(self.custom_rad)
 
-            self.lob = Lobby(self.flag, self.login)
-            self.lob.show()
-
-    def ischeck(self):
-        for i, j in enumerate(self.box_ch):
-            if j.isChecked():
-                return i
-        return False
+        self.lbl_custom.setPixmap(pix.scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio,
+                                             Qt.TransformationMode.SmoothTransformation))
+        self.lbl_custom.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_custom.setStyleSheet(
+            "border: 2px solid #8b5cf6; border-radius: 10px; background-color: #1e293b;")
+        self.avatars_list.append(file)
+        self.custom_rad.setChecked(True)
 
 
 class Lobby(QWidget):
@@ -228,6 +341,28 @@ class Lobby(QWidget):
         self.prof = []
         self.pic_lst = []
         super().__init__()
+
+        self.sound_click = QSoundEffect()
+        self.sound_click.setSource(QUrl.fromLocalFile("click.wav"))
+        self.sound_click.setVolume(0.05)
+
+        self.buy_click = QSoundEffect()
+        self.buy_click.setSource(QUrl.fromLocalFile("buy.wav"))
+        self.buy_click.setVolume(0.05)
+
+        self.eror_click = QSoundEffect()
+        self.eror_click.setSource(QUrl.fromLocalFile("eror.wav"))
+        self.eror_click.setVolume(0.05)
+
+        self.audio_output = QAudioOutput()
+        self.player = QMediaPlayer()
+        self.player.setAudioOutput(self.audio_output)
+        self.player.setSource(QUrl.fromLocalFile("music.mp3"))
+        self.player.setLoops(QMediaPlayer.Loops.Infinite)
+        self.audio_output.setVolume(0.05)
+
+        self.flag_lider = False
+
         self.con = sqlite3.connect("proect.db")
         self.cur = self.con.cursor()
         res = self.cur.execute("""select * from profile where login = ?""", (self.login,)).fetchone()
@@ -235,6 +370,7 @@ class Lobby(QWidget):
         self.initUI()
 
     def initUI(self):
+        self.player.play()
         self.setWindowTitle('Lobby')
         self.setFixedSize(1540, 900)
         self.setStyleSheet("""
@@ -313,527 +449,672 @@ class Lobby(QWidget):
         self.continue_btn.hide()
         self.title.hide()
         self.subtitle.hide()
+        self.sound_click.play()
 
-        try:
-            self.btn_profile = QPushButton("Профиль", self)
-            self.btn_profile.setFixedSize(292, 80)
-            self.btn_profile.move(1248, 820)
-            self.btn_profile.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.btn_profile.show()
-            self.btn_profile.setStyleSheet("""
-                QPushButton {
-                    background-color: #ffd166;
-                    color: #1e3c72;
-                    font-size: 26px;
-                    font-weight: bold;
-                    border: none;
-                    border-radius: 40px;
-                }
-                QPushButton:hover   { background-color: #ffe08a; }
-                QPushButton:pressed { background-color: #e6b94a; }
-            """)
-            self.btn_profile.clicked.connect(self.profile_fon)
+        self.btn_profile = QPushButton("Профиль", self)
+        self.btn_profile.setFixedSize(292, 80)
+        self.btn_profile.move(1248, 820)
+        self.btn_profile.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_profile.show()
+        self.btn_profile.setStyleSheet("""
+            QPushButton {
+                background-color: #ffd166;
+                color: #1e3c72;
+                font-size: 26px;
+                font-weight: bold;
+                border: none;
+                border-radius: 40px;
+            }
+            QPushButton:hover   { background-color: #ffe08a; }
+            QPushButton:pressed { background-color: #e6b94a; }
+        """)
+        self.btn_profile.clicked.connect(self.profile_fon)
 
-            self.image1 = QPixmap(str(self.avatar))
-            self.image2 = QLabel(self)
-            self.image2.move(1168, 820)
-            self.image2.resize(80, 80)
+        self.image1 = QPixmap(str(self.avatar))
+        self.image2 = QLabel(self)
+        self.image2.move(1168, 820)
+        self.image2.resize(80, 80)
+        scaled = self.image1.scaled(
+            80, 80,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
+        )
+        self.image2.setPixmap(scaled)
+        self.image2.setStyleSheet("""
+            border: 2px solid #334155;
+            border-radius: 12px;
+            background-color: #1e293b;
+            padding: 4px;
+        """)
+        self.image2.show()
+
+        self.btn_shop = QPushButton("Магазин", self)
+        self.btn_shop.setFixedSize(282, 80)
+        self.btn_shop.move(876, 820)
+        self.btn_shop.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_shop.show()
+        self.btn_shop.setStyleSheet("""
+            QPushButton {
+                background-color: #ffd166;
+                color: #1e3c72;
+                font-size: 26px;
+                font-weight: bold;
+                border: none;
+                border-radius: 40px;
+            }
+            QPushButton:hover   { background-color: #ffe08a; }
+            QPushButton:pressed { background-color: #e6b94a; }
+        """)
+        self.btn_shop.clicked.connect(self.shop_fon)
+
+        self.exit_btn = QPushButton("ВЫЙТИ", self)
+        self.exit_btn.setFixedSize(282, 80)
+        self.exit_btn.move(584, 820)
+        self.exit_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.exit_btn.show()
+        self.exit_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #ffd166;
+                color: #1e3c72;
+                font-size: 26px;
+                font-weight: bold;
+                border: none;
+                border-radius: 40px;
+            }
+            QPushButton:hover   { background-color: #ffe08a; }
+            QPushButton:pressed { background-color: #e6b94a; }
+        """)
+        self.exit_btn.clicked.connect(self.close)
+
+        self.paint_btn = QPushButton("Paint", self)
+        self.paint_btn.setFixedSize(282, 80)
+        self.paint_btn.move(292, 820)
+        self.paint_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.paint_btn.show()
+        self.paint_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #ffd166;
+                color: #1e3c72;
+                font-size: 26px;
+                font-weight: bold;
+                border: none;
+                border-radius: 40px;
+            }
+            QPushButton:hover   { background-color: #ffe08a; }
+            QPushButton:pressed { background-color: #e6b94a; }
+        """)
+        self.paint_btn.clicked.connect(self.paint)
+
+        self.bonus_btn = QPushButton("Казино", self)
+        self.bonus_btn.setFixedSize(282, 80)
+        self.bonus_btn.move(0, 820)
+        self.bonus_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.bonus_btn.show()
+        self.bonus_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #ffd166;
+                color: #1e3c72;
+                font-size: 26px;
+                font-weight: bold;
+                border: none;
+                border-radius: 40px;
+            }
+            QPushButton:hover   { background-color: #ffe08a; }
+            QPushButton:pressed { background-color: #e6b94a; }
+        """)
+        self.bonus_btn.clicked.connect(self.casino)
+
+        self.leaderboard_btn = QPushButton("Лидерборд", self)
+        self.leaderboard_btn.setFixedSize(282, 80)
+        self.leaderboard_btn.move(0, 730)
+        self.leaderboard_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.leaderboard_btn.show()
+        self.leaderboard_btn.setStyleSheet("""
+                        QPushButton {
+                            background-color: #ffd166;
+                            color: #1e3c72;
+                            font-size: 26px;
+                            font-weight: bold;
+                            border: none;
+                            border-radius: 40px;
+                        }
+                        QPushButton:hover   { background-color: #ffe08a; }
+                        QPushButton:pressed { background-color: #e6b94a; }
+                    """)
+        self.leaderboard_btn.clicked.connect(self.open_leaderboard)
+
+        self.inf_btn = QPushButton("Наклейки", self)
+        self.inf_btn.setFixedSize(282, 80)
+        self.inf_btn.move(1248, 730)
+        self.inf_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.inf_btn.show()
+        self.inf_btn.setStyleSheet("""
+                        QPushButton {
+                            background-color: #ffd166;
+                            color: #1e3c72;
+                            font-size: 26px;
+                            font-weight: bold;
+                            border: none;
+                            border-radius: 40px;
+                        }
+                        QPushButton:hover   { background-color: #ffe08a; }
+                        QPushButton:pressed { background-color: #e6b94a; }
+                    """)
+        self.inf_btn.clicked.connect(self.inf)
+
+        x = 0
+        y = 220
+        y1 = 10
+        self.btn_levels = []
+        self.kek_pic = []
+        self.pic1 = ["icon.png", "quiz.jpg", "reaction.jpg", "human.jpg", "clicker.jpg", "snake.jpg", "tetris.jpg",
+                     "math_level.jpg"]
+
+        for i in range(10):
+            if i < 8:
+                self.icon = QPixmap(self.pic1[i])
+                self.icon6 = QLabel(self)
+                self.icon6.move(x, y1)
+                self.icon6.resize(270, 200)
+                scaled = self.icon.scaled(
+                    282, 200,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+                self.icon6.setPixmap(scaled)
+                self.icon6.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.icon6.setStyleSheet("""
+                    border: 2px solid #334155;
+                    border-radius: 8px;
+                    background-color: #1e293b;
+                    padding: 4px;
+                """)
+                self.icon6.show()
+                self.kek_pic.append(self.icon6)
+
+            self.btn_level = QPushButton(f"Уровень: {i + 1}", self)
+            self.btn_level.setFixedSize(282, 80)
+            self.btn_level.move(x, y)
+            self.btn_level.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.btn_level.show()
+
+            if self.level0 >= i + 1:
+                self.btn_level.setStyleSheet("""
+                    QPushButton {
+                        background-color: #16a34a;
+                        color: #1e3c72;
+                        font-size: 26px;
+                        font-weight: bold;
+                        border: none;
+                        border-radius: 40px;
+                    }
+                    QPushButton:hover   { background-color: #16a34a; }
+                    QPushButton:pressed { background-color: #16a34a; }
+                """)
+            else:
+                self.btn_level.setStyleSheet("""
+                    QPushButton {
+                        background-color: #dc2626;
+                        color: #1e3c72;
+                        font-size: 26px;
+                        font-weight: bold;
+                        border: none;
+                        border-radius: 40px;
+                    }
+                    QPushButton:hover   { background-color: #dc2626; }
+                    QPushButton:pressed { background-color: #dc2626; }
+                """)
+            self.btn_level.clicked.connect(self.level)
+
+            x += 292
+            if i == 4:
+                y = 520
+                x = 0
+                y1 = 310
+
+            self.btn_levels.append(self.btn_level)
+
+    def inf(self):
+        self.flag_lider = True
+        self.hide_lobby()
+
+        descriptions = [
+            "«Свидетель» — Кот смотрит прямо в душу. Видел то, что ты натворил в прошлой игре, и теперь молча осуждает.",
+            "«Паникёр» — Кот с картины «Крик». Его лицо, когда ты понял, что поставил всё состояние на «красное», а выпало «чёрное».",
+            "«Скрытый агент» — Панда в солнцезащитных очках. Стиль, харизма, полная невозмутимость. Никто не знает, что у неё на уме.",
+            "«Одобряю» — Енот с большим пальцем вверх. Тот самый друг, который говорит: «Всё норм, давай ещё одну ставку».",
+            "«Добряк» — Пёс в очках с высунутым языком. Абсолютно беззаботный пёсель, которому всё равно, что он проиграл все монеты.",
+            "«Босс качалки» — Пёс в кепке и цветных очках. Кажется, он здесь не играет, а просто пришёл набрать массу и попить протеина.",
+            "«Спецназ» — Губка Боб в военной экипировке. Готов к любым испытаниям, даже если это просто кнопка «Крутить».",
+            "«Неоновый демон» — Красный контур волка. Символизирует твой внутренний азарт, который просыпается ровно в 3 часа ночи.",
+            "«Философ» — Бородатый мужчина. Тысячу раз проигрывал, но всё равно сохраняет спокойствие и рассуждает о смысле жизни.",
+            "«Хищник» — Тёмный персонаж в шлеме. Легенда ночных серверов. Заходит в игру только чтобы забрать последний джекпот."
+        ]
+
+        start_x = 40
+        start_y = 20
+        col_width = 370
+        row_height = 280
+
+        x = start_x
+        y = start_y
+
+        pic_lst = []
+        for i in range(1, 11):
+            pic_lst.append("pic" + str(i))
+
+        for i, j in enumerate(pic_lst):
+            container = QWidget(self)
+            container.move(x, y)
+            container.resize(col_width - 20, row_height - 10)
+            container.setStyleSheet("background: transparent;")
+
+            layout = QVBoxLayout(container)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(5)
+
+            self.image1 = QPixmap(j)
+            self.image3 = QLabel(container)
+            self.image3.resize(col_width - 20, 150)
             scaled = self.image1.scaled(
-                80, 80,
+                col_width - 20, 150,
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation
             )
-            self.image2.setPixmap(scaled)
-            self.image2.setStyleSheet("""
+            self.image3.setPixmap(scaled)
+            self.image3.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.image3.setStyleSheet("""
                 border: 2px solid #334155;
-                border-radius: 12px;
+                border-radius: 8px;
                 background-color: #1e293b;
                 padding: 4px;
             """)
-            self.image2.show()
+            layout.addWidget(self.image3)
 
-            self.btn_shop = QPushButton("Магазин", self)
-            self.btn_shop.setFixedSize(282, 80)
-            self.btn_shop.move(876, 820)
-            self.btn_shop.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.btn_shop.show()
-            self.btn_shop.setStyleSheet("""
-                QPushButton {
-                    background-color: #ffd166;
-                    color: #1e3c72;
-                    font-size: 26px;
-                    font-weight: bold;
-                    border: none;
-                    border-radius: 40px;
-                }
-                QPushButton:hover   { background-color: #ffe08a; }
-                QPushButton:pressed { background-color: #e6b94a; }
+            self.text_label = QLabel(descriptions[i], container)
+            self.text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.text_label.setWordWrap(True)
+            self.text_label.setStyleSheet("""
+                color: #FFD700; 
+                font-size: 13px; 
+                font-weight: bold;
+                background: transparent;
             """)
-            self.btn_shop.clicked.connect(self.shop_fon)
+            layout.addWidget(self.text_label)
 
-            self.exit_btn = QPushButton("ВЫЙТИ", self)
-            self.exit_btn.setFixedSize(282, 80)
-            self.exit_btn.move(584, 820)
-            self.exit_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.exit_btn.show()
-            self.exit_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #ffd166;
-                    color: #1e3c72;
-                    font-size: 26px;
-                    font-weight: bold;
-                    border: none;
-                    border-radius: 40px;
-                }
-                QPushButton:hover   { background-color: #ffe08a; }
-                QPushButton:pressed { background-color: #e6b94a; }
-            """)
-            self.exit_btn.clicked.connect(self.exit)
+            container.show()
+            self.prof.append(container)
 
-            self.cheat_btn = QPushButton("Чит-код", self)
-            self.cheat_btn.setFixedSize(282, 80)
-            self.cheat_btn.move(292, 820)
-            self.cheat_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.cheat_btn.show()
-            self.cheat_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #ffd166;
-                    color: #1e3c72;
-                    font-size: 26px;
-                    font-weight: bold;
-                    border: none;
-                    border-radius: 40px;
-                }
-                QPushButton:hover   { background-color: #ffe08a; }
-                QPushButton:pressed { background-color: #e6b94a; }
-            """)
-            self.cheat_btn.clicked.connect(self.cheat)
+            x += col_width
 
-            self.bonus_btn = QPushButton("Казино", self)
-            self.bonus_btn.setFixedSize(282, 80)
-            self.bonus_btn.move(0, 820)
-            self.bonus_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.bonus_btn.show()
-            self.bonus_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #ffd166;
-                    color: #1e3c72;
-                    font-size: 26px;
-                    font-weight: bold;
-                    border: none;
-                    border-radius: 40px;
-                }
-                QPushButton:hover   { background-color: #ffe08a; }
-                QPushButton:pressed { background-color: #e6b94a; }
-            """)
-            self.bonus_btn.clicked.connect(self.casino)
+            if (i + 1) % 4 == 0:
+                x = start_x
+                y += row_height
 
-            x = 0
-            y = 220
-            y1 = 10
-            self.btn_levels = []
-            self.kek_pic = []
-            self.pic1 = ["icon.png", "quiz.jpg", "reaction.jpg", "human.jpg", "clicker.jpg", "snake.jpg", "tetris.jpg"]
+        self.btn_lobby = QPushButton("Lobby", self)
+        self.btn_lobby.setFixedSize(292, 80)
+        self.btn_lobby.move(1248, 820)
+        self.btn_lobby.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_lobby.show()
+        self.btn_lobby.setStyleSheet("""
+                    QPushButton {
+                        background-color: #ffd166;
+                        color: #1e3c72;
+                        font-size: 26px;
+                        font-weight: bold;
+                        border: none;
+                        border-radius: 40px;
+                    }
+                    QPushButton:hover   { background-color: #ffe08a; }
+                    QPushButton:pressed { background-color: #e6b94a; }
+                """)
+        self.btn_lobby.clicked.connect(self.loddy_fon)
 
-            for i in range(10):
-                if i < 7:
-                    self.icon = QPixmap(self.pic1[i])
-                    self.icon6 = QLabel(self)
-                    self.icon6.move(x, y1)
-                    self.icon6.resize(270, 200)
-                    scaled = self.icon.scaled(
-                        282, 200,
-                        Qt.AspectRatioMode.KeepAspectRatio,
-                        Qt.TransformationMode.SmoothTransformation
-                    )
-                    self.icon6.setPixmap(scaled)
-                    self.icon6.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                    self.icon6.setStyleSheet("""
-                        border: 2px solid #334155;
-                        border-radius: 8px;
-                        background-color: #1e293b;
-                        padding: 4px;
-                    """)
-                    self.icon6.show()
-                    self.kek_pic.append(self.icon6)
+    def open_leaderboard(self):
+        self.sound_click.play()
+        if self.flag_lider:
+            self.btn_lobby.hide()
+        self.hide_lobby()
 
-                self.btn_level = QPushButton(f"Уровень: {i + 1}", self)
-                self.btn_level.setFixedSize(282, 80)
-                self.btn_level.move(x, y)
-                self.btn_level.setCursor(Qt.CursorShape.PointingHandCursor)
-                self.btn_level.show()
+        rows = self.cur.execute("SELECT name, surname, money, ex, level, age, country FROM profile").fetchall()
+        rows = sorted(rows, key=lambda x: (x[4], x[2], x[1], x[0], x[1], x[-2], x[-1]), reverse=True)
 
-                if self.level0 >= i + 1:
-                    self.btn_level.setStyleSheet("""
-                        QPushButton {
-                            background-color: #16a34a;
-                            color: #1e3c72;
-                            font-size: 26px;
-                            font-weight: bold;
-                            border: none;
-                            border-radius: 40px;
-                        }
-                        QPushButton:hover   { background-color: #16a34a; }
-                        QPushButton:pressed { background-color: #16a34a; }
-                    """)
+        self.table = QTableWidget(self)
+        self.table.setSortingEnabled(True)
+        self.table.show()
+        self.table.setGeometry(100, 100, 1340, 600)
+        self.table.setRowCount(len(rows))
+        self.table.setColumnCount(len(rows[0]))
+        self.table.setHorizontalHeaderLabels(["Имя", "Фамилия", "Монеты", "Опыт", "Уровень", "Возраст", "Страна"])
+
+        self.table.setStyleSheet("""
+               QTableWidget {
+                   background-color: #0f172a;
+                   color: #e2e8f0;
+                   border: 2px solid #334155;
+                   border-radius: 15px;
+                   gridline-color: #334155;
+                   font-size: 18px;
+                   outline: 0;
+                   selection-background-color: #1e293b;
+                   selection-color: #38bdf8;
+               }
+               QTableWidget::item {
+                   padding: 10px;
+                   border-bottom: 1px solid #1e293b;
+                   border-right: 1px solid #1e293b;
+                   background-color: #0f172a;
+               }
+               QTableWidget::item:alternate {
+                   background-color: #16213e;
+               }
+               QTableWidget::item:selected {
+                   background-color: #1e293b;
+                   color: #38bdf8;
+               }
+               QHeaderView::section {
+                   background-color: #1e293b;
+                   color: #38bdf8;
+                   padding: 12px;
+                   border: none;
+                   border-bottom: 2px solid #38bdf8;
+                   border-right: 1px solid #334155;
+                   font-weight: bold;
+                   font-size: 16px;
+               }
+               QScrollBar:vertical {
+                   border: none;
+                   background: #0f172a;
+                   width: 10px;
+                   margin: 0px;
+               }
+               QScrollBar::handle:vertical {
+                   background: #334155;
+                   min-height: 20px;
+                   border-radius: 5px;
+               }
+               QScrollBar::handle:vertical:hover {
+                   background: #38bdf8;
+               }
+               QTableCornerButton::section {
+                   background-color: #1e293b;
+                   border: none;
+               }
+           """)
+
+        self.table.verticalHeader().setVisible(False)
+        self.table.setAlternatingRowColors(True)
+        self.table.setShowGrid(False)
+
+        for r, row in enumerate(rows):
+            for c, val in enumerate(row):
+                item = QTableWidgetItem(str(val))
+                if isinstance(val, int):
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 else:
-                    self.btn_level.setStyleSheet("""
-                        QPushButton {
-                            background-color: #dc2626;
-                            color: #1e3c72;
-                            font-size: 26px;
-                            font-weight: bold;
-                            border: none;
-                            border-radius: 40px;
-                        }
-                        QPushButton:hover   { background-color: #dc2626; }
-                        QPushButton:pressed { background-color: #dc2626; }
-                    """)
-                self.btn_level.clicked.connect(self.level)
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 
-                x += 292
-                if i == 4:
-                    y = 520
-                    x = 0
-                    y1 = 310
+                if r == 0:
+                    item.setBackground(QColor(251, 191, 36, 50))
+                    item.setForeground(QColor(251, 191, 36))
+                    font = item.font()
+                    font.setBold(True)
+                    item.setFont(font)
 
-                self.btn_levels.append(self.btn_level)
-        except Exception as e:
-            print(e)
+                self.table.setItem(r, c, item)
+
+        header = self.table.horizontalHeader()
+
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
+
+        header.setSectionResizeMode(6, QHeaderView.ResizeMode.Stretch)
+
+        self.back_btn = QPushButton("Назад", self)
+        self.back_btn.setGeometry(620, 750, 300, 80)
+        self.back_btn.setStyleSheet("""
+               QPushButton {
+                   background-color: #dc2626;
+                   color: white;
+                   font-size: 26px;
+                   font-weight: bold;
+                   border: none;
+                   border-radius: 40px;
+               }
+               QPushButton:hover { background-color: #ef4444; }
+           """)
+        self.back_btn.clicked.connect(self.close_leaderboard)
+        self.back_btn.show()
+
+    def close_leaderboard(self):
+        self.table.hide()
+        self.back_btn.hide()
+        self.on_continue()
+
+    def paint(self):
+        self.sound_click.play()
+        self.paint_level = Paint(self.login)
+        self.paint_level.show()
+        self.close()
 
     def casino(self):
+        self.sound_click.play()
+        casino = Casino(self.login)
+        self.close()
+        casino.show()
+
+    def hide_lobby(self):
         self.btn_profile.hide()
         self.btn_shop.hide()
         for i in self.kek_pic:
             i.hide()
         self.image2.hide()
-        self.cheat_btn.hide()
+        self.paint_btn.hide()
         self.exit_btn.hide()
         self.bonus_btn.hide()
-        casino = Casino(self.login)
-        self.close()
-        casino.show()
+        self.leaderboard_btn.hide()
+        self.inf_btn.hide()
+        for i in self.btn_levels:
+            i.hide()
 
     def level(self):
         n = int(self.sender().text().split()[1])
-        if self.level0 >= n and n == 1:
-            self.btn_profile.hide()
-            self.btn_shop.hide()
-            for i in self.kek_pic:
-                i.hide()
-            self.image2.hide()
-            self.cheat_btn.hide()
-            self.exit_btn.hide()
-            self.bonus_btn.hide()
+        self.hide_lobby()
+        self.sound_click.play()
 
-            def friend():
-                level1 = TicTacToe_friend(self.login)
-                self.close()
-                level1.show()
+        def friend():
+            self.player.stop()
+            self.sound_click.play()
+            level1 = TicTacToe_friend(self.login)
+            self.close()
+            level1.show()
 
-            def bot():
-                level1 = TicTacToe_bot(self.login)
-                self.close()
-                level1.show()
+        def bot():
+            self.player.stop()
+            self.sound_click.play()
+            level1 = TicTacToe_bot(self.login)
+            self.close()
+            level1.show()
 
-            def info():
-                QMessageBox.information(self, "Информация",
-                                        "1 - Выиграв игру с ботом вы можете перейти на следующий уровень.\n"
-                                        "2 - Выиграв игру с ботом вы получаете 25 ฿.\n"
-                                        "3 - За игру с другом вы ничего не получаете.\n"
-                                        "Удачной игры!")
+        self.bot_btn = QPushButton("Игра против бота!", self)
+        self.bot_btn.setFixedSize(600, 200)
+        self.bot_btn.move(750, 200)
+        self.bot_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.bot_btn.show()
+        self.bot_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #ffd166;
+                color: #1e3c72;
+                font-size: 26px;
+                font-weight: bold;
+                border: none;
+                border-radius: 40px;
+            }
+            QPushButton:hover   { background-color: #ffe08a; }
+            QPushButton:pressed { background-color: #e6b94a; }
+        """)
+        self.bot_btn.clicked.connect(bot)
+        self.bot_btn.hide()
 
-            def back():
+        self.friend_btn = QPushButton("Игра против друга!", self)
+        self.friend_btn.setFixedSize(600, 200)
+        self.friend_btn.move(100, 200)
+        self.friend_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.friend_btn.show()
+        self.friend_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #ffd166;
+                color: #1e3c72;
+                font-size: 26px;
+                font-weight: bold;
+                border: none;
+                border-radius: 40px;
+            }
+            QPushButton:hover   { background-color: #ffe08a; }
+            QPushButton:pressed { background-color: #e6b94a; }
+        """)
+        self.friend_btn.clicked.connect(friend)
+        self.friend_btn.hide()
+
+        def start():
+            self.player.stop()
+            self.sound_click.play()
+            if n == 2:
+                self.level2 = History(self.login)
+                self.hide()
+                self.level2.show()
+            if n == 3:
+                self.level3 = Reaction(self.login)
+                self.hide()
+                self.level3.show()
+            if n == 4:
+                self.level4 = HangmanGame(self.login)
+                self.hide()
+                self.level4.show()
+            if n == 5:
+                self.level5 = ClickerUI(self.login)
+                self.hide()
+                self.level5.show()
+            if n == 6:
+                self.level6 = SnakeGame(self.login)
+                self.hide()
+                self.level6.show()
+            if n == 7:
+                self.level7 = TetrisGame(self.login)
+                self.hide()
+                self.level7.show()
+            if n == 8:
+                self.level8 = Math(self.login)
+                self.hide()
+                self.level8.show()
+
+        def info():
+            self.sound_click.play()
+            QMessageBox.information(self, "Информация",
+                                    "1 - Ответив на все вопросы правильно вы можете перейти на следующий уровень.\n"
+                                    "2 - Ответив на все вопросы правильно вы получаете 30 ฿.\n"
+                                    "3 - Ответив не правильно вы ничего не получите.\n"
+                                    "Хорошо провести время!")
+
+        def back():
+            self.sound_click.play()
+            self.info_btn2.hide()
+            self.back_btn2.hide()
+            self.start_btn2.hide()
+            self.icon12.hide()
+            if n == 1:
                 self.friend_btn.hide()
-                self.info_btn.hide()
-                self.back_btn.hide()
                 self.bot_btn.hide()
-                self.icon1.hide()
-                self.zero.hide()
-                self.on_continue()
+            self.on_continue()
 
-            self.friend_btn = QPushButton("Игра против друга!", self)
-            self.friend_btn.setFixedSize(600, 200)
-            self.friend_btn.move(100, 200)
-            self.friend_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.friend_btn.show()
-            self.friend_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #ffd166;
-                    color: #1e3c72;
-                    font-size: 26px;
-                    font-weight: bold;
-                    border: none;
-                    border-radius: 40px;
-                }
-                QPushButton:hover   { background-color: #ffe08a; }
-                QPushButton:pressed { background-color: #e6b94a; }
-            """)
-            self.friend_btn.clicked.connect(friend)
+        self.info_btn2 = QPushButton("Информация!", self)
+        self.info_btn2.setFixedSize(250, 80)
+        self.info_btn2.move(0, 820)
+        self.info_btn2.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.info_btn2.show()
+        self.info_btn2.setStyleSheet("""
+            QPushButton {
+                background-color: #ffd166;
+                color: #1e3c72;
+                font-size: 26px;
+                font-weight: bold;
+                border: none;
+                border-radius: 40px;
+            }
+            QPushButton:hover   { background-color: #ffe08a; }
+            QPushButton:pressed { background-color: #e6b94a; }
+        """)
+        self.info_btn2.clicked.connect(info)
 
-            self.zero = QLabel(f"Выбери игру:", self)
-            self.zero.resize(250, 50)
-            self.zero.move(600, 60)
-            self.zero.setStyleSheet("color: #fbbf24; font-size: 40px;")
-            self.zero.show()
+        self.back_btn2 = QPushButton("Назад", self)
+        self.back_btn2.setFixedSize(200, 80)
+        self.back_btn2.move(1340, 820)
+        self.back_btn2.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.back_btn2.show()
+        self.back_btn2.setStyleSheet("""
+            QPushButton {
+                background-color: #dc2626;
+                color: #1e3c72;
+                font-size: 26px;
+                font-weight: bold;
+                border: none;
+                border-radius: 40px;
+            }
+            QPushButton:hover   { background-color: #dc2626; }
+            QPushButton:pressed { background-color: #dc2626; }
+        """)
+        self.back_btn2.clicked.connect(back)
 
-            self.info_btn = QPushButton("Информация!", self)
-            self.info_btn.setFixedSize(250, 80)
-            self.info_btn.move(0, 820)
-            self.info_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.info_btn.show()
-            self.info_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #ffd166;
-                    color: #1e3c72;
-                    font-size: 26px;
-                    font-weight: bold;
-                    border: none;
-                    border-radius: 40px;
-                }
-                QPushButton:hover   { background-color: #ffe08a; }
-                QPushButton:pressed { background-color: #e6b94a; }
-            """)
-            self.info_btn.clicked.connect(info)
-
-            self.back_btn = QPushButton("Назад", self)
-            self.back_btn.setFixedSize(200, 80)
-            self.back_btn.move(1340, 820)
-            self.back_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.back_btn.show()
-            self.back_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #dc2626;
-                    color: #1e3c72;
-                    font-size: 26px;
-                    font-weight: bold;
-                    border: none;
-                    border-radius: 40px;
-                }
-                QPushButton:hover   { background-color: #dc2626; }
-                QPushButton:pressed { background-color: #dc2626; }
-            """)
-            self.back_btn.clicked.connect(back)
-
-            self.icon = QPixmap("icon.png")
-            self.icon1 = QLabel(self)
-            self.icon1.move(550, 450)
-            self.icon1.resize(400, 400)
-            scaled = self.icon.scaled(
-                400, 400,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation
-            )
-            self.icon1.setPixmap(scaled)
-            self.icon1.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.icon1.setStyleSheet("""
-                border: 2px solid #334155;
-                border-radius: 8px;
-                background-color: #1e293b;
-                padding: 4px;
-            """)
-            self.icon1.show()
-
-            self.bot_btn = QPushButton("Игра против бота!", self)
-            self.bot_btn.setFixedSize(600, 200)
-            self.bot_btn.move(750, 200)
-            self.bot_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.bot_btn.show()
-            self.bot_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #ffd166;
-                    color: #1e3c72;
-                    font-size: 26px;
-                    font-weight: bold;
-                    border: none;
-                    border-radius: 40px;
-                }
-                QPushButton:hover   { background-color: #ffe08a; }
-                QPushButton:pressed { background-color: #e6b94a; }
-            """)
-            self.bot_btn.clicked.connect(bot)
-            for i in self.btn_levels:
-                i.hide()
-
-        elif self.level0 >= n and (2 <= n <= 7):
-            self.btn_profile.hide()
-            self.btn_shop.hide()
-            for i in self.kek_pic:
-                i.hide()
-            self.image2.hide()
-            self.cheat_btn.hide()
-            self.exit_btn.hide()
-            self.bonus_btn.hide()
-
-            def start():
-                if n == 2:
-                    self.level2 = History(self.login)
-                    self.hide()
-                    self.level2.show()
-                if n == 3:
-                    self.level3 = Reaction(self.login)
-                    self.hide()
-                    self.level3.show()
-                if n == 4:
-                    self.level4 = HangmanGame(self.login)
-                    self.hide()
-                    self.level4.show()
-                if n == 5:
-                    self.level5 = ClickerUI(self.login)
-                    self.hide()
-                    self.level5.show()
-                if n == 6:
-                    self.level6 = SnakeGame(self.login)
-                    self.hide()
-                    self.level6.show()
-                if n == 7:
-                    self.level7 = TetrisGame(self.login)
-                    self.hide()
-                    self.level7.show()
-
-            def info():
-                QMessageBox.information(self, "Информация",
-                                        "1 - Ответив на все вопросы правильно вы можете перейти на следующий уровень.\n"
-                                        "2 - Ответив на все вопросы правильно вы получаете 30 ฿.\n"
-                                        "3 - Ответив не правильно вы ничего не получите.\n"
-                                        "Хорошо провести время!")
-
-            def back():
-                self.info_btn2.hide()
-                self.back_btn2.hide()
-                self.start_btn2.hide()
-                self.icon12.hide()
-                self.on_continue()
-
-            self.info_btn2 = QPushButton("Информация!", self)
-            self.info_btn2.setFixedSize(250, 80)
-            self.info_btn2.move(0, 820)
-            self.info_btn2.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.info_btn2.show()
-            self.info_btn2.setStyleSheet("""
-                QPushButton {
-                    background-color: #ffd166;
-                    color: #1e3c72;
-                    font-size: 26px;
-                    font-weight: bold;
-                    border: none;
-                    border-radius: 40px;
-                }
-                QPushButton:hover   { background-color: #ffe08a; }
-                QPushButton:pressed { background-color: #e6b94a; }
-            """)
-            self.info_btn2.clicked.connect(info)
-
-            self.back_btn2 = QPushButton("Назад", self)
-            self.back_btn2.setFixedSize(200, 80)
-            self.back_btn2.move(1340, 820)
-            self.back_btn2.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.back_btn2.show()
-            self.back_btn2.setStyleSheet("""
-                QPushButton {
-                    background-color: #dc2626;
-                    color: #1e3c72;
-                    font-size: 26px;
-                    font-weight: bold;
-                    border: none;
-                    border-radius: 40px;
-                }
-                QPushButton:hover   { background-color: #dc2626; }
-                QPushButton:pressed { background-color: #dc2626; }
-            """)
-            self.back_btn2.clicked.connect(back)
-
-            self.icon2 = QPixmap(self.pic1[n - 1])
-            self.icon12 = QLabel(self)
-            self.icon12.move(550, 450)
-            self.icon12.resize(400, 400)
-            scaled = self.icon2.scaled(
-                400, 400,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation
-            )
-            self.icon12.setPixmap(scaled)
-            self.icon12.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.icon12.setStyleSheet("""
-                border: 2px solid #334155;
-                border-radius: 8px;
-                background-color: #1e293b;
-                padding: 4px;
-            """)
-            self.icon12.show()
-
-
-            self.start_btn2 = QPushButton("НАЧАТЬ", self)
-            self.start_btn2.setFixedSize(600, 200)
-            self.start_btn2.move(450, 200)
-            self.start_btn2.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.start_btn2.show()
-            self.start_btn2.setStyleSheet("""
-                QPushButton {
-                    background-color: #ffd166;
-                    color: #1e3c72;
-                    font-size: 26px;
-                    font-weight: bold;
-                    border: none;
-                    border-radius: 40px;
-                }
-                QPushButton:hover   { background-color: #ffe08a; }
-                QPushButton:pressed { background-color: #e6b94a; }
-            """)
-            self.start_btn2.clicked.connect(start)
-            for i in self.btn_levels:
-                i.hide()
-        else:
-            self.bonus()
-
-    def bonus(self):
-        self.image5 = QPixmap("gorila.jpg")
-        self.image4 = QLabel(self)
-        self.image4.move(400, 100)
-        self.image4.resize(900, 900)
-        scaled = self.image5.scaled(
-            900, 900,
+        self.icon2 = QPixmap(self.pic1[n - 1])
+        self.icon12 = QLabel(self)
+        self.icon12.move(550, 450)
+        self.icon12.resize(400, 400)
+        scaled = self.icon2.scaled(
+            400, 400,
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation
         )
-        self.image4.setPixmap(scaled)
-        self.image4.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.image4.setStyleSheet("""
+        self.icon12.setPixmap(scaled)
+        self.icon12.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.icon12.setStyleSheet("""
             border: 2px solid #334155;
             border-radius: 8px;
             background-color: #1e293b;
             padding: 4px;
         """)
-        self.image4.show()
-        QTimer.singleShot(2000, self.image4.hide)
+        self.icon12.show()
 
-    def cheat(self):
-        answer = QMessageBox.question(
-            self,
-            'Подтверждение',
-            'Вы уверены, что хотите использовать чит-код?',
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
-        )
-        if answer == QMessageBox.StandardButton.Yes:
-            self.money += 9999999999
-            self.cur.execute('''Update profile set money = ? where login = ?''', (self.money, self.login))
-            self.con.commit()
+        self.start_btn2 = QPushButton("Начать", self)
+        self.start_btn2.setFixedSize(600, 200)
+        self.start_btn2.move(450, 200)
+        self.start_btn2.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.start_btn2.show()
+        self.start_btn2.setStyleSheet("""
+            QPushButton {
+                background-color: #ffd166;
+                color: #1e3c72;
+                font-size: 26px;
+                font-weight: bold;
+                border: none;
+                border-radius: 40px;
+            }
+            QPushButton:hover   { background-color: #ffe08a; }
+            QPushButton:pressed { background-color: #e6b94a; }
+        """)
+        self.start_btn2.clicked.connect(start)
 
-    def exit(self):
-        self.close()
+        if n == 1:
+            self.friend_btn.show()
+            self.bot_btn.show()
+            self.start_btn2.hide()
 
     def shop_fon(self):
-        self.btn_profile.hide()
-        self.btn_shop.hide()
-        self.image2.hide()
-        for i in self.kek_pic:
-            i.hide()
-        self.cheat_btn.hide()
-        self.exit_btn.hide()
-        self.bonus_btn.hide()
-        for i in self.btn_levels:
-            i.hide()
+        self.sound_click.play()
+        self.hide_lobby()
         self.setStyleSheet("""
             QWidget {
                 background-color: #14532d;
@@ -940,7 +1221,7 @@ class Lobby(QWidget):
         n = int(self.sender().text().split()[0])
         if self.money >= n:
             if self.pic_lst[self.price_pic.index(n)] not in self.pic:
-                QMessageBox.information(self, 'Покупка', 'Успешная покупка!')
+                self.buy_click.play()
                 self.money -= n
                 self.balance_label.setText(f"Ваш баланс: {self.money} ฿")
                 n1 = json.loads(self.pic)
@@ -949,34 +1230,33 @@ class Lobby(QWidget):
                 self.cur.execute('UPDATE profile SET pic=?, money=? WHERE login=?', (self.pic, self.money, self.login))
                 self.con.commit()
             else:
-                QMessageBox.warning(self, 'Предупреждение', 'У вас уже есть эта наклейка')
+                self.eror_click.play()
         else:
-            QMessageBox.warning(self, 'Предупреждение', 'Недостаточно средств!')
+            self.eror_click.play()
 
     def profile_fon(self):
-        self.btn_shop.hide()
-        self.cheat_btn.hide()
-        self.exit_btn.hide()
-        self.bonus_btn.hide()
-        for i in self.kek_pic:
-            i.hide()
-        for i in self.btn_levels:
-            i.hide()
-        self.image2.move(660, 50)
-        self.image2.resize(200, 200)
-        scaled = self.image1.scaled(
+        self.hide_lobby()
+        self.sound_click.play()
+        print(self.avatar)
+        self.image67 = QPixmap(self.avatar)
+        self.image23 = QLabel(self)
+        self.image23.move(660, 50)
+        self.image23.resize(200, 200)
+        scaled = self.image67.scaled(
             200, 200,
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation
         )
-        self.image2.setPixmap(scaled)
-        self.image2.setStyleSheet("""
+        self.image23.setPixmap(scaled)
+        self.image23.setStyleSheet("""
             border: 2px solid #334155;
             border-radius: 12px;
             background-color: #1e293b;
             padding: 4px;
         """)
-        self.prof.append(self.image2)
+        self.image23.show()
+        self.prof.append(self.image23)
+
         self.name_label = QLabel(self)
         self.name_label.move(650, 250)
         self.name_label.setText(f"Имя: {self.surname + ' ' + self.name}")
@@ -1182,20 +1462,44 @@ class MainWindow(QMainWindow):
         self.initUI()
 
     def initUI(self):
-        self.setGeometry(300, 300, 400, 400)
         self.setWindowTitle('Вход')
-        self.setFixedSize(400, 400)
+        self.setFixedSize(1540, 900)
 
-        self.entry_bt = QPushButton("Войти", self)
-        self.entry_bt.move(100, 280)
-        self.entry_bt.resize(200, 40)
+        self.login_page = QWidget(self)
+        self.login_page.setGeometry(0, 0, 1540, 900)
+
+        layout = QVBoxLayout(self.login_page)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.setSpacing(20)
+
+        self.pixmap_lock = QPixmap('lock.jpg')
+        self.image_lock = QLabel(self.login_page)
+        self.image_lock.setPixmap(self.pixmap_lock.scaled(200, 200, Qt.AspectRatioMode.KeepAspectRatio,
+                                                          Qt.TransformationMode.SmoothTransformation))
+        self.image_lock.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.image_lock)
+
+        self.login1 = QLineEdit(self.login_page)
+        self.login1.setPlaceholderText("Введите логин")
+        self.login1.setFixedSize(400, 50)
+        self.login1.setStyleSheet("font-size: 18px; padding: 5px;")
+        layout.addWidget(self.login1, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        self.password1 = QLineEdit(self.login_page)
+        self.password1.setPlaceholderText("Введите пароль")
+        self.password1.setEchoMode(QLineEdit.EchoMode.Password)
+        self.password1.setFixedSize(400, 50)
+        self.password1.setStyleSheet("font-size: 18px; padding: 5px;")
+        layout.addWidget(self.password1, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        self.entry_bt = QPushButton("Войти", self.login_page)
+        self.entry_bt.setFixedSize(400, 60)
         self.entry_bt.setCursor(Qt.CursorShape.PointingHandCursor)
         self.entry_bt.clicked.connect(self.entry)
-        self.box.append(self.entry_bt)
+        layout.addWidget(self.entry_bt, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        self.register_bt = QPushButton("Зарегистрироваться", self)
-        self.register_bt.move(100, 330)
-        self.register_bt.resize(200, 40)
+        self.register_bt = QPushButton("Зарегистрироваться", self.login_page)
+        self.register_bt.setFixedSize(400, 60)
         self.register_bt.setCursor(Qt.CursorShape.PointingHandCursor)
         self.register_bt.setStyleSheet("""
             QPushButton {
@@ -1210,52 +1514,13 @@ class MainWindow(QMainWindow):
             QPushButton:pressed { background-color: #0f172a; }
         """)
         self.register_bt.clicked.connect(self.sec)
-        self.box.append(self.register_bt)
+        layout.addWidget(self.register_bt, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        self.password_label = QLabel("Пароль", self)
-        self.password_label.resize(200, 40)
-        self.password_label.move(100, 200)
-        self.password_label.setStyleSheet("color: #cbd5e1; font-size: 14px;")
-        self.box.append(self.password_label)
-
-        self.password1 = QLineEdit(self)
-        self.password1.move(100, 230)
-        self.password1.resize(200, 40)
-        self.password1.setPlaceholderText("Введите пароль")
-        self.password1.setEchoMode(QLineEdit.EchoMode.Password)
-        self.box.append(self.password1)
-
-        self.login_label = QLabel("Логин", self)
-        self.login_label.resize(200, 40)
-        self.login_label.move(100, 140)
-        self.login_label.setStyleSheet("color: #cbd5e1; font-size: 14px;")
-        self.box.append(self.login_label)
-
-        self.login1 = QLineEdit(self)
-        self.login1.move(100, 170)
-        self.login1.resize(200, 40)
-        self.login1.setPlaceholderText("Введите логин")
-        self.box.append(self.login1)
-
-        self.pixmap_lock = QPixmap('lock.jpg')
-        self.image_lock = QLabel(self)
-        self.image_lock.move(150, 30)
-        self.image_lock.resize(100, 100)
-        scaled = self.pixmap_lock.scaled(
-            100, 100,
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation
-        )
-        self.image_lock.setPixmap(scaled)
-        self.box.append(self.image_lock)
-
-        self.error_label = QLabel("Не верный логин или пароль!", self)
-        self.error_label.resize(300, 40)
-        self.error_label.move(150, 140)
-        self.error_label.setStyleSheet(
-            "color: #f87171; font-size: 13px; font-weight: bold;"
-        )
+        self.error_label = QLabel("Не верный логин или пароль!", self.login_page)
+        self.error_label.setStyleSheet("color: #f87171; font-size: 20px; font-weight: bold;")
+        self.error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.error_label.hide()
+        layout.addWidget(self.error_label)
 
     def entry(self):
         self.con = sqlite3.connect("proect.db")
@@ -1264,85 +1529,87 @@ class MainWindow(QMainWindow):
         if res:
             self.login, self.password, self.name, self.surname, self.age, self.country, self.avatar, self.level0, self.ex, self.money, self.pic = res
             if self.password1.text() == self.password:
-                for i in self.box:
-                    i.hide()
+                self.login_page.hide()
                 self.error_label.hide()
                 self.check_on_robot()
                 return
         self.error_label.show()
 
     def sec(self):
-        self.hide()
+        self.close()
         self.second_window = SecondWindow()
 
     def check_on_robot(self):
-        self.check = QLabel("ПРОЙДИТЕ КАПЧУ!!!", self)
-        self.check.resize(300, 40)
-        self.check.move(150, 0)
-        self.check.setStyleSheet(
-            "color: #f87171; font-weight: bold; font-size: 16px;"
-        )
-        self.check.show()
+        self.captcha_page = QWidget(self)
+        self.captcha_page.setGeometry(0, 0, 1540, 900)
+        self.captcha_page.show()
 
-        self.bike = QLabel("Найдите все велосипеды!!!", self)
-        self.bike.resize(200, 40)
-        self.bike.move(50, 20)
-        self.bike.setStyleSheet("color: #cbd5e1; font-size: 13px;")
-        self.bike.show()
+        main_layout = QVBoxLayout(self.captcha_page)
+        main_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        main_layout.setSpacing(20)
 
-        self.check_count = QLabel(f"Попыток осталось - {self.count}", self)
-        self.check_count.resize(200, 40)
-        self.check_count.move(250, 20)
-        self.check_count.setStyleSheet("color: #fbbf24; font-size: 13px;")
-        self.check_count.show()
+        self.check = QLabel("ПРОЙДИТЕ КАПЧУ!!!", self.captcha_page)
+        self.check.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.check.setStyleSheet("color: #f87171; font-weight: bold; font-size: 40px;")
+        main_layout.addWidget(self.check)
 
-        self.check_btn = QPushButton(f"Проверить", self)
-        self.check_btn.resize(200, 40)
-        self.check_btn.move(80, 350)
-        self.check_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.check_btn.show()
-        self.check_btn.clicked.connect(self.true_false)
+        self.bike = QLabel("Найдите все велосипеды!!!", self.captcha_page)
+        self.bike.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.bike.setStyleSheet("color: #cbd5e1; font-size: 24px;")
+        main_layout.addWidget(self.bike)
 
-        x = 50
-        y = 50
-        x1 = 80
-        y1 = 120
+        self.check_count = QLabel(f"Попыток осталось - {self.count}", self.captcha_page)
+        self.check_count.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.check_count.setStyleSheet("color: #fbbf24; font-size: 24px;")
+        main_layout.addWidget(self.check_count)
+
+        grid_frame = QFrame(self.captcha_page)
+        grid_layout = QGridLayout(grid_frame)
+        grid_layout.setSpacing(15)
+
         self.checkbox = []
         self.img_error = []
 
         for j, i in enumerate(self.img):
             self.image1 = QPixmap(i)
-            self.image2 = QLabel(self)
-            self.image2.move(x, y)
-            self.image2.resize(80, 80)
+            self.image2 = QLabel(grid_frame)
+            self.image2.resize(200, 200)
             scaled = self.image1.scaled(
-                80, 80,
+                200, 200,
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation
             )
             self.image2.setPixmap(scaled)
+            self.image2.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.image2.setStyleSheet("""
                 border: 2px solid #334155;
                 border-radius: 8px;
                 background-color: #1e293b;
-                padding: 2px;
+                padding: 4px;
             """)
-            self.image2.show()
             self.img_error.append(self.image2)
 
-            self.check_box = QCheckBox(self)
-            self.check_box.move(x1, y1)
+            self.check_box = QCheckBox(grid_frame)
             self.check_box.setCursor(Qt.CursorShape.PointingHandCursor)
             self.checkbox.append(self.check_box)
-            self.check_box.show()
 
-            x += 100
-            x1 += 100
-            if (j + 1) % 3 == 0:
-                y += 100
-                x = 50
-                y1 += 100
-                x1 = 80
+            cell_widget = QWidget()
+            cell_layout = QVBoxLayout(cell_widget)
+            cell_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            cell_layout.addWidget(self.image2)
+            cell_layout.addWidget(self.check_box, alignment=Qt.AlignmentFlag.AlignCenter)
+
+            row = j // 3
+            col = j % 3
+            grid_layout.addWidget(cell_widget, row, col)
+
+        main_layout.addWidget(grid_frame, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        self.check_btn = QPushButton("Проверить", self.captcha_page)
+        self.check_btn.setFixedSize(400, 60)
+        self.check_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.check_btn.clicked.connect(self.true_false)
+        main_layout.addWidget(self.check_btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
     def true_false(self):
         true_pic = []
@@ -1359,7 +1626,8 @@ class MainWindow(QMainWindow):
         if checked != 3:
             self.error()
         if checked == 3:
-            self.hide()
+            self.captcha_page.hide()
+            self.close()
             self.flag = False
             self.lobby = Lobby(self.flag, self.login)
             self.lobby.show()
@@ -1367,72 +1635,26 @@ class MainWindow(QMainWindow):
     def error(self):
         self.count -= 1
         if self.count != 0:
-            for i in self.img_error:
-                i.hide()
-            for i in self.checkbox:
-                i.hide()
-            self.check.hide()
-            self.bike.hide()
-            self.check_count.hide()
-            self.check_btn.hide()
+            self.check_count.setText(f"Попыток осталось - {self.count}")
             self.img = random.sample(
                 ["bike1.png", "bike2.png", "bike3.jpg",
                  "car1.png", "car2.jpg", "car3.png",
                  "kat1.jpg", "kat2.png", "kat3.png"], k=9)
-            for i in self.checkbox:
-                if i.isChecked():
-                    i.setChecked(False)
+            self.captcha_page.hide()
             self.check_on_robot()
         else:
-            for i in self.img_error:
-                i.hide()
-            for i in self.checkbox:
-                i.hide()
-            self.check.hide()
-            self.bike.hide()
-            self.check_count.hide()
-            self.check_btn.hide()
-
-            error_all = []
-            for i in range(9):
-                if i < 4:
-                    name = "error1.jpg"
-                elif 4 <= i < 8:
-                    name = "error2.png"
-                else:
-                    name = "robot.png"
-
-                self.pixmap_lock = QPixmap(name)
-                self.image_lock = QLabel(self)
-                self.image_lock.resize(100, 100)
-                scaled = self.pixmap_lock.scaled(
-                    100, 100,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-                self.image_lock.setPixmap(scaled)
-                error_all.append(self.image_lock)
+            self.captcha_page.hide()
 
             self.robot_true = QLabel("ТЫ РОБОТ!!!", self)
-            self.robot_true.resize(200, 40)
-            self.robot_true.move(170, 150)
-            self.robot_true.setStyleSheet(
-                "color: #f87171; font-weight: bold; font-size: 22px;"
-            )
+            self.robot_true.setGeometry(0, 0, 1540, 900)
+            self.robot_true.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.robot_true.setStyleSheet("""
+                color: #f87171; 
+                font-weight: bold; 
+                font-size: 100px; 
+                background-color: #0f172a;
+            """)
             self.robot_true.show()
-
-            error_all[0].move(10, 10)
-            error_all[1].move(300, 10)
-            error_all[2].move(10, 300)
-            error_all[3].move(300, 300)
-            error_all[4].move(150, 10)
-            error_all[5].move(10, 150)
-            error_all[6].move(300, 150)
-            error_all[7].move(150, 300)
-            error_all[8].move(150, 200)
-
-            for i in error_all:
-                i.show()
 
 
 if __name__ == '__main__':

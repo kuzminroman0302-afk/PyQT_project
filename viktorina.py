@@ -1,11 +1,13 @@
-import json
+import random
 import sqlite3
 import sys
+
+from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QStackedWidget,
     QLabel, QPushButton, QRadioButton, QButtonGroup, QGraphicsDropShadowEffect, QMessageBox
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QFont, QColor
 
 
@@ -13,45 +15,74 @@ class History(QWidget):
     def __init__(self, login):
         super().__init__()
         self.login = login
+
+        one_question = random.sample(["862 год", "988 год", "1147 год", "1237 год"], k=4)
+        two_question = random.sample(["Иван III", "Иван IV Грозный", "Пётр I", "Борис Годунов"], k=4)
+        three_question = random.sample(["1240 год", "1380 год", "1480 год", "1552 год"], k=4)
+        four_question = random.sample(["А.В. Суворов", "М.И. Кутузов", "П.И. Багратион", "М.Б. Барклай-де-Толли"], k=4)
+        five_question = random.sample(["1700 год", "1703 год", "1712 год", "1721 год"], k=4)
+        six_question = random.sample(["Запуск первого спутника", "Первый полёт человека в космос", "Создание ООН",
+                            "Начало перестройки"], k=4)
+
         self.questions = [
             {
                 "question": "В каком году произошло Крещение Руси?",
-                "options": ["862 год", "988 год", "1147 год", "1237 год"],
-                "correct": 1
+                "options": one_question,
+                "correct": one_question.index("988 год")
             },
             {
                 "question": "Кто был первым русским царём?",
-                "options": ["Иван III", "Иван IV Грозный", "Пётр I", "Борис Годунов"],
-                "correct": 1
+                "options": two_question,
+                "correct": two_question.index("Иван IV Грозный")
             },
             {
                 "question": "В каком году состоялась Куликовская битва?",
-                "options": ["1240 год", "1380 год", "1480 год", "1552 год"],
-                "correct": 1
+                "options": three_question,
+                "correct": three_question.index("1380 год")
             },
             {
                 "question": "Кто командовал русской армией в Бородинском сражении?",
-                "options": ["А.В. Суворов", "М.И. Кутузов", "П.И. Багратион", "М.Б. Барклай-де-Толли"],
-                "correct": 1
+                "options": four_question,
+                "correct": four_question.index("М.И. Кутузов")
             },
             {
                 "question": "В каком году был основан Санкт-Петербург?",
-                "options": ["1700 год", "1703 год", "1712 год", "1721 год"],
-                "correct": 1
+                "options": five_question,
+                "correct": five_question.index("1703 год")
             },
             {
                 "question": "Какое событие произошло 12 апреля 1961 года?",
-                "options": ["Запуск первого спутника", "Первый полёт человека в космос", "Создание ООН",
-                            "Начало перестройки"],
-                "correct": 1
+                "options": six_question,
+                "correct": six_question.index("Первый полёт человека в космос")
             }
         ]
         self.current_index = 0
         self.score = 0
+
+        self.audio_output = QAudioOutput()
+        self.player = QMediaPlayer()
+        self.player.setAudioOutput(self.audio_output)
+        self.player.setSource(QUrl.fromLocalFile("history.mp3"))
+        self.player.setLoops(QMediaPlayer.Loops.Infinite)
+        self.audio_output.setVolume(0.5)
+
+        self.sound_click = QSoundEffect()
+        self.sound_click.setSource(QUrl.fromLocalFile("click.wav"))
+        self.sound_click.setVolume(0.2)
+
+        self.suc_click = QSoundEffect()
+        self.suc_click.setSource(QUrl.fromLocalFile("buy.wav"))
+        self.suc_click.setVolume(0.2)
+
+        self.eror_click = QSoundEffect()
+        self.eror_click.setSource(QUrl.fromLocalFile("eror.wav"))
+        self.eror_click.setVolume(0.2)
+
         self.initUI()
         self.show_question()
 
     def initUI(self):
+        self.player.play()
         self.setWindowTitle("История России: Викторина")
         self.setFixedSize(1540, 900)
 
@@ -236,15 +267,16 @@ class History(QWidget):
         self.stacked_widget.setCurrentWidget(self.question_page)
 
     def check_answer(self):
+        self.sound_click.play()
         checked_id = self.button_group.checkedId()
         if checked_id == -1:
-            self.question_label.setText("⚠ Выберите вариант ответа!")
             return
 
         q = self.questions[self.current_index]
         is_correct = (checked_id == q["correct"])
 
         if is_correct:
+            self.suc_click.play()
             self.score += 1
             self.answer_status_label.setText("✅")
             self.answer_title_label.setText("Верно!")
@@ -252,6 +284,7 @@ class History(QWidget):
             self.correct_answer_label.setText("Отличная работа! Так держать! 🌟")
             self.next_button.setStyleSheet("background-color: #2ecc71;")
         else:
+            self.eror_click.play()
             self.answer_status_label.setText("❌")
             self.answer_title_label.setText("Неверно")
             self.answer_title_label.setStyleSheet("font-size: 48px; font-weight: bold; color: #ffffff;")
@@ -300,7 +333,7 @@ class History(QWidget):
     def restart_quiz(self):
         total = len(self.questions)
         percent = round(self.score / total * 100)
-
+        self.player.stop()
         if percent >= 100:
             QMessageBox.information(self, 'Победа!', 'Поздравляю вы прошли второй уровень!\n'
                                                      'Вам начислено 30 ฿.\n'

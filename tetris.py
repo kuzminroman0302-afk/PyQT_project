@@ -1,10 +1,12 @@
 import sqlite3
 import sys
 import random
+
+from PyQt6.QtMultimedia import QSoundEffect, QAudioOutput, QMediaPlayer
 from PyQt6.QtWidgets import (
     QWidget, QPushButton, QApplication, QLabel, QVBoxLayout, QHBoxLayout, QFrame, QGraphicsDropShadowEffect
 )
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QColor
 
 
@@ -33,6 +35,21 @@ class TetrisGame(QWidget):
         self.all_cord = []
         self.score = 0
 
+        self.over = QSoundEffect()
+        self.over.setSource(QUrl.fromLocalFile("over.wav"))
+        self.over.setVolume(0.3)
+
+        self.connect = QSoundEffect()
+        self.connect.setSource(QUrl.fromLocalFile("click.wav"))
+        self.connect.setVolume(0.3)
+
+        self.audio_output = QAudioOutput()
+        self.tetris = QMediaPlayer()
+        self.tetris.setAudioOutput(self.audio_output)
+        self.tetris.setSource(QUrl.fromLocalFile("tetris.mp3"))
+        self.tetris.setLoops(QMediaPlayer.Loops.Infinite)
+        self.audio_output.setVolume(0.3)
+
         self.initUI()
         self.spawn()
 
@@ -41,6 +58,7 @@ class TetrisGame(QWidget):
         self.timer.start(500)
 
     def initUI(self):
+        self.tetris.play()
         self.setWindowTitle("🧱 Тетрис")
         self.setFixedSize(900, 900)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -179,6 +197,7 @@ class TetrisGame(QWidget):
                     c.append(pos)
             if (x, y) in c:
                 self.timer.stop()
+                self.over.play()
                 self.game_over_label.show()
                 return
 
@@ -208,8 +227,10 @@ class TetrisGame(QWidget):
         for x, y in self.all_cord[-1][:-1]:
             nx, ny = x + dx, y + dy
             if nx < 0 or nx > 9 or ny > 12:
+                self.connect.play()
                 return True
             if (nx, ny) in c:
+                self.connect.play()
                 return True
         return False
 
@@ -302,6 +323,7 @@ class TetrisGame(QWidget):
             self.tick()
 
     def exit_to_lobby(self):
+        self.tetris.stop()
         self.timer.stop()
         self.close()
         if self.score >= 10:

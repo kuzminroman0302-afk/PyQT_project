@@ -83,12 +83,13 @@ class Info(QWidget):
 
 
 class Paint(QMainWindow):
-    def __init__(self):
+    def __init__(self, login):
         super().__init__()
+        self.login = login
         self.shapes = []
         self.flag = False
         self.size = 5
-        self.color = '#5865f2'
+        self.color = '#fffff'
         self.background = QPixmap()
 
         self.initUI()
@@ -136,12 +137,16 @@ class Paint(QMainWindow):
         self.btn_clear.clicked.connect(self.clear)
         self.btn_clear.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
+        self.btn_exit = QPushButton('Lobby')
+        self.btn_exit.clicked.connect(self.exit)
+        self.btn_exit.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+
         self.btn_info = QPushButton('❓  Информация')
         self.btn_info.clicked.connect(self.info)
         self.btn_info.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
         for b in (self.btn_color, self.btn_size, self.btn_brush,
-                  self.btn_open, self.btn_save, self.btn_clear):
+                  self.btn_open, self.btn_save, self.btn_clear, self.btn_exit):
             tb_layout.addWidget(b)
         tb_layout.addStretch()
         tb_layout.addWidget(self.btn_info)
@@ -168,7 +173,7 @@ class Paint(QMainWindow):
         self.lbl_mode.setObjectName('status')
         self.lbl_size = QLabel(f'Размер: {self.size} px')
         self.lbl_size.setObjectName('status')
-        self.lbl_color = QLabel('Цвет: #5865f2')
+        self.lbl_color = QLabel('Цвет: #fffff')
         self.lbl_color.setObjectName('status')
 
         status_bar.addWidget(self.lbl_mode)
@@ -179,6 +184,12 @@ class Paint(QMainWindow):
         root.addWidget(toolbar)
         root.addWidget(canvas_frame, 1)
         root.addLayout(status_bar)
+
+    def exit(self):
+        from proect import Lobby
+        self.close()
+        self.exit1 = Lobby(None, self.login)
+        self.exit1.show()
 
     def paint_event(self, event):
         qp = QPainter(self.canvas)

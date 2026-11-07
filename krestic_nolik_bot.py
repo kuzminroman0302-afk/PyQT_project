@@ -2,7 +2,8 @@ import json
 import sys
 import sqlite3
 
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QUrl
+from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
 from PyQt6.QtWidgets import QApplication, QWidget, QRadioButton, QPushButton, QLabel, QLineEdit, QLCDNumber, QMessageBox
 import random
 
@@ -15,9 +16,22 @@ class TicTacToe_bot(QWidget):
         self.pl = 'X'
         self.v = True
         self.r = True
+
+        self.audio_output = QAudioOutput()
+        self.player = QMediaPlayer()
+        self.player.setAudioOutput(self.audio_output)
+        self.player.setSource(QUrl.fromLocalFile("bot.mp3"))
+        self.player.setLoops(QMediaPlayer.Loops.Infinite)
+        self.audio_output.setVolume(0.2)
+
+        self.sound_click = QSoundEffect()
+        self.sound_click.setSource(QUrl.fromLocalFile("click.wav"))
+        self.sound_click.setVolume(0.2)
+
         self.initUI()
 
     def initUI(self):
+        self.player.play()
         self.setFixedSize(1540, 900)
         self.setWindowTitle('Крестики нолики')
         x = 500
@@ -87,12 +101,14 @@ class TicTacToe_bot(QWidget):
         """)
 
     def exit(self):
+        self.player.stop()
         from proect import Lobby
         self.close()
         self.lobby = Lobby(None, self.login)
         self.lobby.show()
 
     def clic(self, i, j):
+        self.sound_click.play()
         self.flag = False
         btn = self.button_grid[i][j]
         if btn.text() != ' ' or self.v is False:
@@ -101,7 +117,6 @@ class TicTacToe_bot(QWidget):
         btn.setText(self.pl)
         self.check()
         if self.mb_win() is not None:
-            print(self.mb_win())
             y, x = self.mb_win()
             btn = self.button_grid[y][x]
             if self.pl == "X":

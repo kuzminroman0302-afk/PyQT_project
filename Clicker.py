@@ -1,11 +1,13 @@
 import sqlite3
 import sys
 import random
+
+from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QFrame, QGraphicsDropShadowEffect, QScrollArea, QGridLayout
 )
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QColor
 
 
@@ -132,6 +134,22 @@ class ClickerUI(QWidget):
         super().__init__()
         self.login = login
         self.con = sqlite3.connect("proect.db")
+
+        self.audio_output = QAudioOutput()
+        self.player = QMediaPlayer()
+        self.player.setAudioOutput(self.audio_output)
+        self.player.setSource(QUrl.fromLocalFile("clicker.mp3"))
+        self.player.setLoops(QMediaPlayer.Loops.Infinite)
+        self.audio_output.setVolume(0.2)
+
+        self.sound_click = QSoundEffect()
+        self.sound_click.setSource(QUrl.fromLocalFile("click.wav"))
+        self.sound_click.setVolume(0.2)
+
+        self.buy = QSoundEffect()
+        self.buy.setSource(QUrl.fromLocalFile("buy.wav"))
+        self.buy.setVolume(0.2)
+
         cur = self.con.cursor()
 
         res = cur.execute("SELECT * FROM Clicker WHERE login = ?", (self.login,)).fetchone()
@@ -148,6 +166,7 @@ class ClickerUI(QWidget):
         self.auto_income = (2 ** self.level_auto) - 1 if self.level_auto > 0 else 0
 
         self.initUI()
+        self.player.play()
         self.update_prices()
 
         self.timer = QTimer(self)
@@ -385,10 +404,13 @@ class ClickerUI(QWidget):
         self.bonus_btn.clicked.connect(self.bonus)
 
     def open_info(self):
+        self.sound_click.play()
         self.info_window = InfoWindow()
         self.info_window.show()
 
     def lobby(self):
+        self.sound_click.play()
+        self.player.stop()
         from proect import Lobby
         self.timer.stop()
         self.save_to_db()
@@ -410,11 +432,13 @@ class ClickerUI(QWidget):
         self.lobby.show()
 
     def open_achievements(self):
+        self.sound_click.play()
         self.achievements_window = Achievements(self.one, self.two, self.three, self.four, self.five)
         self.achievements_window.show()
 
     def bonus(self):
         if int(self.score_label.text()) >= 100:
+            self.buy.play()
             crit_num = random.randint(1, 3)
             if crit_num == 3:
                 self.score_label.setText(str(int(self.score_label.text()) + (self.one_click * 10)))
@@ -425,6 +449,7 @@ class ClickerUI(QWidget):
 
     def mult(self):
         if int(self.score_label.text()) >= self.price_mult and self.level_mult < 10:
+            self.buy.play()
             self.score_label.setText(str(int(self.score_label.text()) - self.price_mult))
             self.level_mult += 1
             self.one_click *= 2
@@ -440,6 +465,7 @@ class ClickerUI(QWidget):
         if self.crit_n != 0:
             crit_num = random.randint(1, 20)
             if crit_num in [i for i in range(1, self.crit_n // 5 + 1)]:
+                self.buy.play()
                 self.score_label.setText(str(int(self.score_label.text()) + self.one_click * 5))
                 self.save_to_db()
                 return
@@ -448,6 +474,7 @@ class ClickerUI(QWidget):
 
     def auto_click(self):
         if int(self.score_label.text()) >= self.price_auto and self.level_auto < 10:
+            self.buy.play()
             if self.level_auto == 0:
                 self.auto_income = 1
             self.score_label.setText(str(int(self.score_label.text()) - self.price_auto))
@@ -474,16 +501,15 @@ class ClickerUI(QWidget):
         if int(self.score_label.text()) >= self.price_crit and self.crit_n < 100:
             self.score_label.setText(str(int(self.score_label.text()) - self.price_crit))
             self.crit_n += 5
-
+            self.buy.play()
             if self.crit_n == 100:
                 self.three = 1
-
             self.update_prices()
             self.save_to_db()
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = ClickerUI("test_user")
+    window = ClickerUI("67")
     window.show()
     sys.exit(app.exec())

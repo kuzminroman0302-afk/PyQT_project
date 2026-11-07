@@ -1,10 +1,12 @@
 import sqlite3
 import sys
 import random
+
+from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QGridLayout, QMessageBox, QLineEdit
 )
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QColor, QPainter, QPen
 
 
@@ -55,26 +57,39 @@ class HangmanGame(QWidget):
         super().__init__()
         self.login = login
         self.winner = False
-        self.words = [
-            ("ПРОГРАММА", ""),
-            ("КОМПЬЮТЕР", ""),
-            ("КЛАВИАТУРА", ""),
-            ("МОНИТОР", ""),
-            ("АЛГОРИТМ", ""),
-            ("ПИТОН", ""),
-            ("ИНТЕРНЕТ", ""),
-            ("КРИСТАЛЛ", ""),
-        ]
+
+        with open("words.txt", encoding="utf-8") as file:
+            a = file.read().split("\n")
+        self.words = []
+        for i in a:
+            self.words.append((i.upper(), ""))
         self.current_word = ""
         self.hint = ""
         self.guessed_letters = set()
         self.errors = 0
         self.max_errors = 6
         self.letter_inputs = []
+
+        self.audio_output = QAudioOutput()
+        self.player = QMediaPlayer()
+        self.player.setAudioOutput(self.audio_output)
+        self.player.setSource(QUrl.fromLocalFile("math.mp3"))
+        self.player.setLoops(QMediaPlayer.Loops.Infinite)
+        self.audio_output.setVolume(0.5)
+
+        self.suc_click = QSoundEffect()
+        self.suc_click.setSource(QUrl.fromLocalFile("buy.wav"))
+        self.suc_click.setVolume(0.2)
+
+        self.eror_click = QSoundEffect()
+        self.eror_click.setSource(QUrl.fromLocalFile("eror.wav"))
+        self.eror_click.setVolume(0.2)
+
         self.initUI()
         self.start_new_game()
 
     def initUI(self):
+        self.player.play()
         self.setWindowTitle("Виселица")
         self.setFixedSize(1000, 850)
 
@@ -206,6 +221,7 @@ class HangmanGame(QWidget):
         main_layout.addLayout(keyboard_layout)
 
     def exit(self):
+        self.player.stop()
         if self.winner:
             self.timer.stop()
             con = sqlite3.connect("proect.db")
@@ -225,6 +241,7 @@ class HangmanGame(QWidget):
 
     def start_new_game(self):
         self.current_word, self.hint = random.choice(self.words)
+        print(self.current_word)
         self.guessed_letters = set()
         self.errors = 0
         self.gallows.set_errors(0)
@@ -285,6 +302,7 @@ class HangmanGame(QWidget):
         btn.setEnabled(False)
 
         if letter in self.current_word:
+            self.suc_click.play()
             btn.setStyleSheet("""
                 QPushButton {
                     background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #11998e, stop:1 #38ef7d);
@@ -311,6 +329,7 @@ class HangmanGame(QWidget):
                     """)
             self.check_win()
         else:
+            self.eror_click.play()
             btn.setStyleSheet("""
                 QPushButton {
                     background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #991b1b, stop:1 #ef4444);
