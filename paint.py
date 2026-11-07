@@ -309,6 +309,6 @@ class Paint(QMainWindow):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     app.setStyle('abc')
-    ex = Paint()
+    ex = Paint("ds")
     ex.show()
     sys.exit(app.exec())

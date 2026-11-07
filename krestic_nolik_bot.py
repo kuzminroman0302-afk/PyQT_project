@@ -138,6 +138,7 @@ class TicTacToe_bot(QWidget):
             self.check()
 
     def win_user(self):
+        self.player.stop()
         con = sqlite3.connect("proect.db")
         cur = con.cursor()
         name, surname, level, money, ex = cur.execute(

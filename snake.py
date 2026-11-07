@@ -47,6 +47,7 @@ class SnakeGame(QWidget):
 
     def initUI(self):
         self.setWindowTitle("🐍 Змейка")
+        self.setGeometry(300, 30, 1000, 900)
         self.setFixedSize(1000, 900)
         self.snake1.play()
 

@@ -465,7 +465,6 @@ class ClickerUI(QWidget):
         if self.crit_n != 0:
             crit_num = random.randint(1, 20)
             if crit_num in [i for i in range(1, self.crit_n // 5 + 1)]:
-                self.buy.play()
                 self.score_label.setText(str(int(self.score_label.text()) + self.one_click * 5))
                 self.save_to_db()
                 return

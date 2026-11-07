@@ -60,7 +60,8 @@ class TetrisGame(QWidget):
     def initUI(self):
         self.tetris.play()
         self.setWindowTitle("🧱 Тетрис")
-        self.setFixedSize(900, 900)
+        self.setGeometry(300, 30, 900, 900)
+        self.setFixedSize(1000, 900)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         self.setStyleSheet("""

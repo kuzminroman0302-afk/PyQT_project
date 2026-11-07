@@ -202,8 +202,9 @@ class Reaction(QWidget):
         self.timer.start(750)
 
     def initUI(self):
-        self.setWindowTitle("🎯 Реакция: Найди красную кнопку!")
-        self.setFixedSize(1000, 900)
+        self.setWindowTitle("🎯 Реакция")
+        self.setGeometry(300, 30, 1000, 850)
+        self.setFixedSize(1000, 850)
 
         self.setStyleSheet("""
             QWidget {

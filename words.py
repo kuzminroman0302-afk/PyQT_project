@@ -91,6 +91,7 @@ class HangmanGame(QWidget):
     def initUI(self):
         self.player.play()
         self.setWindowTitle("Виселица")
+        self.setGeometry(300, 30, 1000, 850)
         self.setFixedSize(1000, 850)
 
         self.setStyleSheet("""
@@ -344,7 +345,6 @@ class HangmanGame(QWidget):
             self.gallows.set_errors(self.errors)
             self.errors_label.setText(f"Ошибок: {self.errors} / {self.max_errors}")
             self.check_lose()
-
 
     def check_win(self):
         if all(letter in self.guessed_letters for letter in self.current_word):

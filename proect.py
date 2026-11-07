@@ -5,7 +5,7 @@ import sqlite3
 from PyQt6.QtCore import Qt, QUrl
 
 from PyQt6.QtGui import QPixmap, QColor
-from PyQt6.QtMultimedia import QSoundEffect, QAudioOutput, QMediaPlayer
+from PyQt6.QtMultimedia import (QSoundEffect, QAudioOutput, QMediaPlayer)
 from PyQt6.QtWidgets import (QApplication, QWidget, QRadioButton,
                              QPushButton, QLabel, QLineEdit,
                              QCheckBox, QMainWindow,
@@ -200,7 +200,6 @@ class SecondWindow(QWidget):
         self.btn_register.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_register.clicked.connect(self.on_register)
         form_layout.addWidget(self.btn_register)
-
         main_layout.addLayout(form_layout, stretch=1)
 
         right_layout = QVBoxLayout()
@@ -923,194 +922,229 @@ class Lobby(QWidget):
 
     def level(self):
         n = int(self.sender().text().split()[1])
-        self.hide_lobby()
-        self.sound_click.play()
-
-        def friend():
-            self.player.stop()
+        if self.level0 >= n != 10 and n != 9:
+            self.hide_lobby()
             self.sound_click.play()
-            level1 = TicTacToe_friend(self.login)
-            self.close()
-            level1.show()
 
-        def bot():
-            self.player.stop()
-            self.sound_click.play()
-            level1 = TicTacToe_bot(self.login)
-            self.close()
-            level1.show()
+            def friend():
+                self.player.stop()
+                self.sound_click.play()
+                level1 = TicTacToe_friend(self.login)
+                self.close()
+                level1.show()
 
-        self.bot_btn = QPushButton("Игра против бота!", self)
-        self.bot_btn.setFixedSize(600, 200)
-        self.bot_btn.move(750, 200)
-        self.bot_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.bot_btn.show()
-        self.bot_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #ffd166;
-                color: #1e3c72;
-                font-size: 26px;
-                font-weight: bold;
-                border: none;
-                border-radius: 40px;
-            }
-            QPushButton:hover   { background-color: #ffe08a; }
-            QPushButton:pressed { background-color: #e6b94a; }
-        """)
-        self.bot_btn.clicked.connect(bot)
-        self.bot_btn.hide()
+            def bot():
+                self.player.stop()
+                self.sound_click.play()
+                level1 = TicTacToe_bot(self.login)
+                self.close()
+                level1.show()
 
-        self.friend_btn = QPushButton("Игра против друга!", self)
-        self.friend_btn.setFixedSize(600, 200)
-        self.friend_btn.move(100, 200)
-        self.friend_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.friend_btn.show()
-        self.friend_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #ffd166;
-                color: #1e3c72;
-                font-size: 26px;
-                font-weight: bold;
-                border: none;
-                border-radius: 40px;
-            }
-            QPushButton:hover   { background-color: #ffe08a; }
-            QPushButton:pressed { background-color: #e6b94a; }
-        """)
-        self.friend_btn.clicked.connect(friend)
-        self.friend_btn.hide()
-
-        def start():
-            self.player.stop()
-            self.sound_click.play()
-            if n == 2:
-                self.level2 = History(self.login)
-                self.hide()
-                self.level2.show()
-            if n == 3:
-                self.level3 = Reaction(self.login)
-                self.hide()
-                self.level3.show()
-            if n == 4:
-                self.level4 = HangmanGame(self.login)
-                self.hide()
-                self.level4.show()
-            if n == 5:
-                self.level5 = ClickerUI(self.login)
-                self.hide()
-                self.level5.show()
-            if n == 6:
-                self.level6 = SnakeGame(self.login)
-                self.hide()
-                self.level6.show()
-            if n == 7:
-                self.level7 = TetrisGame(self.login)
-                self.hide()
-                self.level7.show()
-            if n == 8:
-                self.level8 = Math(self.login)
-                self.hide()
-                self.level8.show()
-
-        def info():
-            self.sound_click.play()
-            QMessageBox.information(self, "Информация",
-                                    "1 - Ответив на все вопросы правильно вы можете перейти на следующий уровень.\n"
-                                    "2 - Ответив на все вопросы правильно вы получаете 30 ฿.\n"
-                                    "3 - Ответив не правильно вы ничего не получите.\n"
-                                    "Хорошо провести время!")
-
-        def back():
-            self.sound_click.play()
-            self.info_btn2.hide()
-            self.back_btn2.hide()
-            self.start_btn2.hide()
-            self.icon12.hide()
-            if n == 1:
-                self.friend_btn.hide()
-                self.bot_btn.hide()
-            self.on_continue()
-
-        self.info_btn2 = QPushButton("Информация!", self)
-        self.info_btn2.setFixedSize(250, 80)
-        self.info_btn2.move(0, 820)
-        self.info_btn2.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.info_btn2.show()
-        self.info_btn2.setStyleSheet("""
-            QPushButton {
-                background-color: #ffd166;
-                color: #1e3c72;
-                font-size: 26px;
-                font-weight: bold;
-                border: none;
-                border-radius: 40px;
-            }
-            QPushButton:hover   { background-color: #ffe08a; }
-            QPushButton:pressed { background-color: #e6b94a; }
-        """)
-        self.info_btn2.clicked.connect(info)
-
-        self.back_btn2 = QPushButton("Назад", self)
-        self.back_btn2.setFixedSize(200, 80)
-        self.back_btn2.move(1340, 820)
-        self.back_btn2.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.back_btn2.show()
-        self.back_btn2.setStyleSheet("""
-            QPushButton {
-                background-color: #dc2626;
-                color: #1e3c72;
-                font-size: 26px;
-                font-weight: bold;
-                border: none;
-                border-radius: 40px;
-            }
-            QPushButton:hover   { background-color: #dc2626; }
-            QPushButton:pressed { background-color: #dc2626; }
-        """)
-        self.back_btn2.clicked.connect(back)
-
-        self.icon2 = QPixmap(self.pic1[n - 1])
-        self.icon12 = QLabel(self)
-        self.icon12.move(550, 450)
-        self.icon12.resize(400, 400)
-        scaled = self.icon2.scaled(
-            400, 400,
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation
-        )
-        self.icon12.setPixmap(scaled)
-        self.icon12.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.icon12.setStyleSheet("""
-            border: 2px solid #334155;
-            border-radius: 8px;
-            background-color: #1e293b;
-            padding: 4px;
-        """)
-        self.icon12.show()
-
-        self.start_btn2 = QPushButton("Начать", self)
-        self.start_btn2.setFixedSize(600, 200)
-        self.start_btn2.move(450, 200)
-        self.start_btn2.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.start_btn2.show()
-        self.start_btn2.setStyleSheet("""
-            QPushButton {
-                background-color: #ffd166;
-                color: #1e3c72;
-                font-size: 26px;
-                font-weight: bold;
-                border: none;
-                border-radius: 40px;
-            }
-            QPushButton:hover   { background-color: #ffe08a; }
-            QPushButton:pressed { background-color: #e6b94a; }
-        """)
-        self.start_btn2.clicked.connect(start)
-
-        if n == 1:
-            self.friend_btn.show()
+            self.bot_btn = QPushButton("Игра против бота!", self)
+            self.bot_btn.setFixedSize(600, 200)
+            self.bot_btn.move(750, 200)
+            self.bot_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             self.bot_btn.show()
-            self.start_btn2.hide()
+            self.bot_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #ffd166;
+                    color: #1e3c72;
+                    font-size: 26px;
+                    font-weight: bold;
+                    border: none;
+                    border-radius: 40px;
+                }
+                QPushButton:hover   { background-color: #ffe08a; }
+                QPushButton:pressed { background-color: #e6b94a; }
+            """)
+            self.bot_btn.clicked.connect(bot)
+            self.bot_btn.hide()
+
+            self.friend_btn = QPushButton("Игра против друга!", self)
+            self.friend_btn.setFixedSize(600, 200)
+            self.friend_btn.move(100, 200)
+            self.friend_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.friend_btn.show()
+            self.friend_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #ffd166;
+                    color: #1e3c72;
+                    font-size: 26px;
+                    font-weight: bold;
+                    border: none;
+                    border-radius: 40px;
+                }
+                QPushButton:hover   { background-color: #ffe08a; }
+                QPushButton:pressed { background-color: #e6b94a; }
+            """)
+            self.friend_btn.clicked.connect(friend)
+            self.friend_btn.hide()
+
+            if n == 1:
+                text = f'''1 - Чтобы перейти на следущий уровень надо пройти игру с ботом.\n
+                                            2 - Выиграв бота вы получаете 25 ฿.\n
+                                            3 - Игра против друга за нее ничего не получаете.\n
+                                            Хорошо провести время!'''
+
+            elif n == 2 or n == 8:
+                text = f'''1 - Ответив на все вопросы правильно вы можете перейти на следующий уровень.\n
+                                            2 - Ответив на все вопросы правильно вы получаете 30 ฿.\n
+                                            3 - Ответив не правильно вы ничего не получите.\n
+                                            Хорошо провести время!'''
+
+            elif n == 3:
+                text = f'''1 - Если вы наберете 20 очков в игры вы сможете пройти на следущий уровень.\n
+                                            2 - За победу вы получаете 30 ฿.\n
+                                            Хорошо провести время!'''
+
+            elif n == 4:
+                text = f'''1 - Если вы угадаете слово вы сможете пройти на следущий уровень.\n
+                                            2 - Угадав слово вы получаете 30 ฿.\n
+                                            Хорошо провести время!'''
+
+            elif n == 5:
+                text = f'''1 - Если вы выполните все достижения в кликере вы сможете пройти на следущий уровень.\n
+                                            2 - Вы получаете 35 ฿.\n
+                                            Хорошо провести время!'''
+
+            elif n == 6:
+                text = f'''1 - Если вы наберете 20 очков вы сможете пройти на следущий уровень.\n
+                                            2 - Вы получаете 35 ฿.\n
+                                            Хорошо провести время!'''
+
+            elif n == 7:
+                text = f'''1 - Если вы наберете 100 очков вы сможете пройти на следущий уровень.\n
+                                            2 - Вы получаете 35 ฿.\n
+                                            Хорошо провести время!'''
+
+            def start():
+                self.player.stop()
+                self.sound_click.play()
+                if n == 2:
+                    self.level2 = History(self.login)
+                    self.hide()
+                    self.level2.show()
+                if n == 3:
+                    self.level3 = Reaction(self.login)
+                    self.hide()
+                    self.level3.show()
+                if n == 4:
+                    self.level4 = HangmanGame(self.login)
+                    self.hide()
+                    self.level4.show()
+                if n == 5:
+                    self.level5 = ClickerUI(self.login)
+                    self.hide()
+                    self.level5.show()
+                if n == 6:
+                    self.level6 = SnakeGame(self.login)
+                    self.hide()
+                    self.level6.show()
+                if n == 7:
+                    self.level7 = TetrisGame(self.login)
+                    self.hide()
+                    self.level7.show()
+                if n == 8:
+                    self.level8 = Math(self.login)
+                    self.hide()
+                    self.level8.show()
+
+            def info():
+                self.sound_click.play()
+                QMessageBox.information(self, "Информация",
+                                        text)
+
+            def back():
+                self.sound_click.play()
+                self.info_btn2.hide()
+                self.back_btn2.hide()
+                self.start_btn2.hide()
+                self.icon12.hide()
+                if n == 1:
+                    self.friend_btn.hide()
+                    self.bot_btn.hide()
+                self.on_continue()
+
+            self.info_btn2 = QPushButton("Информация!", self)
+            self.info_btn2.setFixedSize(250, 80)
+            self.info_btn2.move(0, 820)
+            self.info_btn2.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.info_btn2.show()
+            self.info_btn2.setStyleSheet("""
+                QPushButton {
+                    background-color: #ffd166;
+                    color: #1e3c72;
+                    font-size: 26px;
+                    font-weight: bold;
+                    border: none;
+                    border-radius: 40px;
+                }
+                QPushButton:hover   { background-color: #ffe08a; }
+                QPushButton:pressed { background-color: #e6b94a; }
+            """)
+            self.info_btn2.clicked.connect(info)
+
+            self.back_btn2 = QPushButton("Назад", self)
+            self.back_btn2.setFixedSize(200, 80)
+            self.back_btn2.move(1340, 820)
+            self.back_btn2.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.back_btn2.show()
+            self.back_btn2.setStyleSheet("""
+                QPushButton {
+                    background-color: #dc2626;
+                    color: #1e3c72;
+                    font-size: 26px;
+                    font-weight: bold;
+                    border: none;
+                    border-radius: 40px;
+                }
+                QPushButton:hover   { background-color: #dc2626; }
+                QPushButton:pressed { background-color: #dc2626; }
+            """)
+            self.back_btn2.clicked.connect(back)
+
+            self.icon2 = QPixmap(self.pic1[n - 1])
+            self.icon12 = QLabel(self)
+            self.icon12.move(550, 450)
+            self.icon12.resize(400, 400)
+            scaled = self.icon2.scaled(
+                400, 400,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+            self.icon12.setPixmap(scaled)
+            self.icon12.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.icon12.setStyleSheet("""
+                border: 2px solid #334155;
+                border-radius: 8px;
+                background-color: #1e293b;
+                padding: 4px;
+            """)
+            self.icon12.show()
+
+            self.start_btn2 = QPushButton("Начать", self)
+            self.start_btn2.setFixedSize(600, 200)
+            self.start_btn2.move(450, 200)
+            self.start_btn2.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.start_btn2.show()
+            self.start_btn2.setStyleSheet("""
+                QPushButton {
+                    background-color: #ffd166;
+                    color: #1e3c72;
+                    font-size: 26px;
+                    font-weight: bold;
+                    border: none;
+                    border-radius: 40px;
+                }
+                QPushButton:hover   { background-color: #ffe08a; }
+                QPushButton:pressed { background-color: #e6b94a; }
+            """)
+            self.start_btn2.clicked.connect(start)
+
+            if n == 1:
+                self.friend_btn.show()
+                self.bot_btn.show()
+                self.start_btn2.hide()
 
     def shop_fon(self):
         self.sound_click.play()
@@ -1211,6 +1245,16 @@ class Lobby(QWidget):
             self.btn_price.clicked.connect(self.buy)
             self.prof.append(self.btn_price)
 
+            self.cor_not = QLabel(self)
+            self.cor_not.resize(20, 20)
+            self.cor_not.move(x, y1)
+            if j in self.pic:
+                self.cor_not.setText("✅")
+            else:
+                self.cor_not.setText("❌")
+            self.cor_not.show()
+            self.prof.append(self.cor_not)
+
             x += 250
             if i == 4:
                 x = 30
@@ -1229,6 +1273,9 @@ class Lobby(QWidget):
                 self.pic = json.dumps(n1)
                 self.cur.execute('UPDATE profile SET pic=?, money=? WHERE login=?', (self.pic, self.money, self.login))
                 self.con.commit()
+                self.loddy_fon()
+                self.shop_fon()
+
             else:
                 self.eror_click.play()
         else:
@@ -1237,7 +1284,6 @@ class Lobby(QWidget):
     def profile_fon(self):
         self.hide_lobby()
         self.sound_click.play()
-        print(self.avatar)
         self.image67 = QPixmap(self.avatar)
         self.image23 = QLabel(self)
         self.image23.move(660, 50)
