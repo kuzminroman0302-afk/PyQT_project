@@ -186,9 +186,6 @@ class Reaction(QWidget):
         self.player1.setLoops(QMediaPlayer.Loops.Infinite)
         self.audio_output.setVolume(0.5)
 
-        if self.player1.isAvailable():
-            self.player1.play()
-
         self.suc_click = QSoundEffect()
         self.suc_click.setSource(QUrl.fromLocalFile("buy.wav"))
         self.suc_click.setVolume(0.4)
@@ -197,9 +194,19 @@ class Reaction(QWidget):
         self.eror_click.setSource(QUrl.fromLocalFile("eror.wav"))
         self.eror_click.setVolume(0.4)
 
+        con = sqlite3.connect("proect.db")
+        cur = con.cursor()
+        res = cur.execute("SELECT music FROM profile WHERE login = ?", (self.login,)).fetchone()
+        self.music = res[0]
+        con.close()
+
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.tick)
         self.timer.start(750)
+
+        if self.player1.isAvailable():
+            if self.music == 1:
+                self.player1.play()
 
     def initUI(self):
         self.setWindowTitle("🎯 Реакция")
@@ -367,12 +374,14 @@ class Reaction(QWidget):
     def click(self, ind):
         if self.buttons[ind][2] is False and self.time < 0:
             if self.buttons[ind][1] == "red":
-                self.suc_click.play()
+                if self.music == 1:
+                    self.suc_click.play()
                 self.score += 1
                 self.score_label.setText(f"Очки: {self.score}")
                 self.buttons[ind][2] = True
             else:
-                self.eror_click.play()
+                if self.music == 1:
+                    self.eror_click.play()
                 self.misses += 1
                 self.miss_label.setText(f"Промахи: {self.misses}")
                 self.buttons[ind][2] = True
@@ -389,12 +398,13 @@ class Reaction(QWidget):
             j[1] = "green"
             j[2] = False
         if not self.player1.isAvailable():
-            self.player1.play()
+            if self.music == 1:
+                self.player1.play()
         self.timer.start(750)
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    game = Reaction("aaf")
+    game = Reaction("s")
     game.show()
     sys.exit(app.exec())

@@ -151,10 +151,10 @@ class Casino(QWidget):
         self.count = 0
         con = sqlite3.connect("proect.db")
         cur = con.cursor()
-        money = cur.execute("SELECT money FROM profile where login = ?", (self.login,)).fetchone()
+        money, self.music1 = cur.execute("SELECT money, music FROM profile where login = ?", (self.login,)).fetchone()
         con.close()
 
-        self.balance = int(money[0])
+        self.balance = int(money)
         self.bet = 0
         self.user_choice = None
 
@@ -174,7 +174,7 @@ class Casino(QWidget):
         self.audio_output1 = QAudioOutput()
         self.music = QMediaPlayer()
         self.music.setAudioOutput(self.audio_output1)
-        self.music.setSource(QUrl.fromLocalFile("music.mp3"))
+        self.music.setSource(QUrl.fromLocalFile("music.wav"))
         self.music.setLoops(QMediaPlayer.Loops.Infinite)
         self.audio_output1.setVolume(0.05)
 
@@ -189,7 +189,8 @@ class Casino(QWidget):
         self.initUI()
 
     def initUI(self):
-        self.music.play()
+        if self.music1 == 1:
+            self.music.play()
         self.setWindowTitle("КАЗИНО")
         self.setFixedSize(1000, 900)
         self.setStyleSheet("background-color: #1a1a2e;")
@@ -379,11 +380,11 @@ class Casino(QWidget):
         if bet > self.balance:
             QMessageBox.warning(self, "Ошибка", "Недостаточно средств!")
             return
-
         self.bet = bet
         self.balance -= bet
         self.label_balance.setText(f"💰 Баланс: {self.balance}")
-        self.player.play()
+        if self.music1 == 1:
+            self.player.play()
         self.count = 0
         self.timer.start(150)
 
@@ -407,17 +408,31 @@ class Casino(QWidget):
             win = self.bet * win_value
             self.balance += win
             self.label_balance.setText(f"💰 Баланс: {self.balance}")
-            self.buy_click.play()
+            if self.music1 == 1:
+                self.buy_click.play()
+            if self.user_choice == 25:
+                con = sqlite3.connect("proect.db")
+                cur = con.cursor()
+                cur.execute("Update profile set casino=? where login = ?", (1, self.login))
+                con.commit()
+                con.close()
+            if self.balance >= 1000:
+                con = sqlite3.connect("proect.db")
+                cur = con.cursor()
+                cur.execute("Update profile set rich=1 where login = ?", (self.login,))
+                con.commit()
+                con.close()
             dlg = WinDialog(self, self.user_choice, win_value, win, self.balance)
             dlg.exec()
         else:
-            self.eror_click.play()
+            if self.music1 == 1:
+                self.eror_click.play()
             dlg = LoseDialog(self, self.user_choice, win_value, self.bet, self.balance)
             dlg.exec()
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    game = Casino("ads")
+    game = Casino("t")
     game.show()
     sys.exit(app.exec())

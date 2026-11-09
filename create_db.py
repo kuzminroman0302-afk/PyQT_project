@@ -23,8 +23,11 @@ CREATE TABLE IF NOT EXISTS profile (
     paint INTEGER,
     casino INTEGER,
     record_snake INTEGER,
-    record_tetris INTEGER)
-''')
+    record_tetris INTEGER,
+    rich INTEGER,
+    music INTEGER,
+    all_ach INTEGER,
+    record_flappy_bird INTEGER)''')
 
 cur.execute('''
 CREATE TABLE IF NOT EXISTS Clicker (

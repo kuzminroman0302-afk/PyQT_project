@@ -38,6 +38,9 @@ class SnakeGame(QWidget):
         self.over.setSource(QUrl.fromLocalFile("over.wav"))
         self.over.setVolume(0.3)
 
+        self.con = sqlite3.connect('proect.db')
+        self.cur = self.con.cursor()
+        self.level, self.ex, self.money, self.record, self.music = self.cur.execute("select level, ex, money, record_snake, music from profile where login=?", (self.login,)).fetchone()
 
         self.initUI()
 
@@ -49,7 +52,8 @@ class SnakeGame(QWidget):
         self.setWindowTitle("🐍 Змейка")
         self.setGeometry(300, 30, 1000, 900)
         self.setFixedSize(1000, 900)
-        self.snake1.play()
+        if self.music == 1:
+            self.snake1.play()
 
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
@@ -83,9 +87,17 @@ class SnakeGame(QWidget):
 
         top_layout.addStretch()
 
+        self.record_label = QLabel(f"Рекорд: {self.record}")
+        self.record_label.setStyleSheet("color: #00e5ff; font-size: 18px; font-weight: bold;")
+        top_layout.addWidget(self.record_label)
+
+        top_layout.addStretch()
+
         self.status_label = QLabel("🟢 Игра идёт")
         self.status_label.setStyleSheet("color: #00e5ff; font-size: 18px; font-weight: bold;")
         top_layout.addWidget(self.status_label)
+
+
 
         shadow = QGraphicsDropShadowEffect(self)
         shadow.setBlurRadius(20)
@@ -252,15 +264,16 @@ class SnakeGame(QWidget):
 
     def exit_to_lobby(self):
         self.snake1.stop()
+        if self.score > self.record:
+            self.record = self.score
+        self.cur.execute("update profile set record_snake=? where login=?",
+                         (self.record, self.login))
         if self.score >= 20:
-            con = sqlite3.connect('proect.db')
-            cur = con.cursor()
-            level, ex, money = cur.execute("select level, ex, money from profile where login=?", (self.login,)).fetchone()
-            if level == 6:
-                level += 1
-            cur.execute("update profile set level=?, ex=?, money=? where login=?", (level, ex + 20, money + 40, self.login))
-            con.commit()
-            con.close()
+            if self.level == 6:
+                self.level += 1
+            self.cur.execute("update profile set level=?, ex=?, money=?, record_snake=? where login=?", (self.level, self.ex + 20, self.money + 40, self.record, self.login))
+        self.con.commit()
+        self.con.close()
         self.timer.stop()
         self.close()
         from proect import Lobby
@@ -327,10 +340,14 @@ class SnakeGame(QWidget):
         self.snake[0][1] = new_y
 
         if self.snake[0] == self.apple:
-            self.apple_eat.play()
+            if self.music == 1:
+                self.apple_eat.play()
             self.snake.append(list(old_snake[-1]))
             self.apple = [random.randint(0, 19), random.randint(0, 19)]
             self.score += 1
+            if self.score > self.record:
+                self.record = self.score
+            self.record_label.setText(f"Рекорд: {self.record}")
             self.score_label.setText(f"Очки: {self.score}")
 
         for i in range(1, len(self.snake)):
@@ -351,7 +368,8 @@ class SnakeGame(QWidget):
                 self.buttons[y][x].setStyleSheet(self.body_style(idx, total))
 
     def end_game(self):
-        self.over.play()
+        if self.music == 1:
+            self.over.play()
         self.timer.stop()
         self.status_label.setText("💀 Игра окончена")
         self.status_label.setStyleSheet("color: #ef4444; font-size: 18px; font-weight: bold;")
@@ -366,10 +384,13 @@ class SnakeGame(QWidget):
         self.apple = [random.randint(0, 19), random.randint(0, 19)]
         self.move_x = 1
         self.move_y = 0
-        self.score = 0
+        if self.score > self.record:
+            self.record = self.score
+        self.record_label.setText(f"Рекорд: {self.record}")
         self.score_label.setText("Очки: 0")
         self.status_label.setText("🟢 Игра идёт")
         self.status_label.setStyleSheet("color: #00e5ff; font-size: 18px; font-weight: bold;")
+        self.score = 0
         self.timer.start(250)
 
     def keyPressEvent(self, event):
@@ -393,6 +414,6 @@ class SnakeGame(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    game = SnakeGame("ads")
+    game = SnakeGame("s")
     game.show()
     sys.exit(app.exec())

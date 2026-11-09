@@ -1,19 +1,21 @@
+import random
 import sqlite3
 import sys
-import random
 
+from PyQt6.QtCore import Qt, QTimer, QUrl
+from PyQt6.QtGui import QColor
 from PyQt6.QtMultimedia import QSoundEffect, QAudioOutput, QMediaPlayer
 from PyQt6.QtWidgets import (
     QWidget, QPushButton, QApplication, QLabel, QVBoxLayout, QHBoxLayout, QFrame, QGraphicsDropShadowEffect
 )
-from PyQt6.QtCore import Qt, QTimer, QUrl
-from PyQt6.QtGui import QColor
 
 
 class TetrisGame(QWidget):
     def __init__(self, login):
         super().__init__()
         self.login = login
+
+        self.game_over = False
 
         self.SHAPES = [
             [[1]],
@@ -39,16 +41,17 @@ class TetrisGame(QWidget):
         self.over.setSource(QUrl.fromLocalFile("over.wav"))
         self.over.setVolume(0.3)
 
-        self.connect = QSoundEffect()
-        self.connect.setSource(QUrl.fromLocalFile("click.wav"))
-        self.connect.setVolume(0.3)
-
         self.audio_output = QAudioOutput()
         self.tetris = QMediaPlayer()
         self.tetris.setAudioOutput(self.audio_output)
         self.tetris.setSource(QUrl.fromLocalFile("tetris.mp3"))
         self.tetris.setLoops(QMediaPlayer.Loops.Infinite)
         self.audio_output.setVolume(0.3)
+
+        self.con = sqlite3.connect("proect.db")
+        self.cur = self.con.cursor()
+        self.money, self.ex, self.level, self.record, self.music = self.cur.execute(
+            "SELECT money, ex, level, record_tetris, music FROM profile WHERE login=?", (self.login,)).fetchone()
 
         self.initUI()
         self.spawn()
@@ -58,7 +61,8 @@ class TetrisGame(QWidget):
         self.timer.start(500)
 
     def initUI(self):
-        self.tetris.play()
+        if self.music == 1:
+            self.tetris.play()
         self.setWindowTitle("🧱 Тетрис")
         self.setGeometry(300, 30, 900, 900)
         self.setFixedSize(1000, 900)
@@ -120,6 +124,15 @@ class TetrisGame(QWidget):
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         right_layout.addWidget(title)
 
+        self.record_label = QLabel(f"Рекорд: {self.record}")
+        self.record_label.setStyleSheet("""
+            font-size: 24px; font-weight: bold; color: black;
+            background: yellow; padding: 15px; border-radius: 10px;
+            border: 2px solid red;
+        """)
+        self.record_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        right_layout.addWidget(self.record_label)
+
         self.score_label = QLabel("Очки: 0")
         self.score_label.setStyleSheet("""
             font-size: 24px; font-weight: bold; color: #38ef7d;
@@ -146,6 +159,21 @@ class TetrisGame(QWidget):
         right_layout.addWidget(info_frame)
 
         right_layout.addStretch()
+
+        self.btn_restart = QPushButton("Restart")
+        self.btn_restart.setFixedSize(220, 60)
+        self.btn_restart.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_restart.setStyleSheet("""
+                    QPushButton {
+                        background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 purple, stop:1 purple);
+                        color: white; border: none; border-radius: 15px;
+                        font-size: 18px; font-weight: bold;
+                    }
+                    QPushButton:hover { background: purple; }
+                    QPushButton:pressed { background: purple; }
+                """)
+        self.btn_restart.clicked.connect(self.restart)
+        right_layout.addWidget(self.btn_restart)
 
         self.btn_exit = QPushButton("🚪 Выйти в лобби")
         self.btn_exit.setFixedSize(220, 60)
@@ -175,6 +203,13 @@ class TetrisGame(QWidget):
         self.game_over_label.move(350, 300)
         self.game_over_label.hide()
 
+    def restart(self):
+        self.timer.stop()
+        self.tetris.stop()
+        self.restart_res = TetrisGame(self.login)
+        self.close()
+        self.restart_res.show()
+
     def spawn(self):
         self.shape = random.choice(self.SHAPES)
         self.color = random.choice(self.colors)
@@ -198,7 +233,9 @@ class TetrisGame(QWidget):
                     c.append(pos)
             if (x, y) in c:
                 self.timer.stop()
-                self.over.play()
+                self.game_over = True
+                if self.music == 1:
+                    self.over.play()
                 self.game_over_label.show()
                 return
 
@@ -228,10 +265,8 @@ class TetrisGame(QWidget):
         for x, y in self.all_cord[-1][:-1]:
             nx, ny = x + dx, y + dy
             if nx < 0 or nx > 9 or ny > 12:
-                self.connect.play()
                 return True
             if (nx, ny) in c:
-                self.connect.play()
                 return True
         return False
 
@@ -302,7 +337,10 @@ class TetrisGame(QWidget):
             i[:-1] = new_coords
 
         self.score += len(clear) * 10
+        if self.score > self.record:
+            self.record = self.score
         self.score_label.setText(f"Очки: {self.score}")
+        self.record_label.setText(f"Рекорд: {self.record}")
         self.redraw()
 
     def redraw(self):
@@ -314,6 +352,8 @@ class TetrisGame(QWidget):
                 self.buttons[y][x].setStyleSheet(f"background: {i[-1]}; border: 1px solid #1e293b; border-radius: 5px;")
 
     def keyPressEvent(self, event):
+        if self.game_over:
+            return
         if event.key() == Qt.Key.Key_Left:
             self.new(-1)
         elif event.key() == Qt.Key.Key_Right:
@@ -327,15 +367,15 @@ class TetrisGame(QWidget):
         self.tetris.stop()
         self.timer.stop()
         self.close()
+        if self.score > self.record:
+            self.record = self.score
         if self.score >= 100:
-            con = sqlite3.connect("proect.db")
-            cur = con.cursor()
-            money, ex, level = cur.execute("SELECT money, ex, level FROM profile WHERE login=?", (self.login,)).fetchone()
-            if level == 7:
-                level += 1
-            cur.execute("Update profile set money=?, ex=?, level=? WHERE login=?", (money + 50, ex + 30, level, self.login)).fetchone()
-            con.commit()
-            con.close()
+            if self.level == 7:
+                self.level += 1
+            self.cur.execute("Update profile set money=?, ex=?, level=?, record_tetris=? WHERE login=?",
+                             (self.money + 50, self.ex + 30, self.level, self.record, self.login)).fetchone()
+            self.con.commit()
+            self.con.close()
         from proect import Lobby
         self.lobby = Lobby(None, self.login)
         self.lobby.show()
@@ -343,6 +383,6 @@ class TetrisGame(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    game = TetrisGame("ads")
+    game = TetrisGame("s")
     game.show()
     sys.exit(app.exec())

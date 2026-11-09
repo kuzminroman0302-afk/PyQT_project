@@ -1,3 +1,4 @@
+import sqlite3
 import sys
 
 from PyQt6.QtCore import QUrl
@@ -22,10 +23,18 @@ class TicTacToe_friend(QWidget):
         self.sound_click = QSoundEffect()
         self.sound_click.setSource(QUrl.fromLocalFile("click.wav"))
         self.sound_click.setVolume(0.2)
+
+        con = sqlite3.connect("proect.db")
+        cur = con.cursor()
+        res = cur.execute("SELECT music FROM profile WHERE login = ?", (self.login,)).fetchone()
+        self.music = res[0]
+        con.close()
+
         self.initUI()
 
     def initUI(self):
-        self.player.play()
+        if self.music == 1:
+            self.player.play()
         self.setFixedSize(1540, 900)
         self.setWindowTitle('Крестики нолики')
         x = 500
@@ -103,7 +112,8 @@ class TicTacToe_friend(QWidget):
 
 
     def hello(self, i, j):
-        self.sound_click.play()
+        if self.music == 1:
+            self.sound_click.play()
         btn = self.button_grid[i][j]
         if btn.text() != '' or self.v is False:
             return
@@ -192,6 +202,6 @@ class TicTacToe_friend(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    ex = TicTacToe_friend("ff")
+    ex = TicTacToe_friend("s")
     ex.show()
     sys.exit(app.exec())

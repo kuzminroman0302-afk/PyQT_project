@@ -85,11 +85,18 @@ class HangmanGame(QWidget):
         self.eror_click.setSource(QUrl.fromLocalFile("eror.wav"))
         self.eror_click.setVolume(0.2)
 
+        con = sqlite3.connect("proect.db")
+        cur = con.cursor()
+        res = cur.execute("SELECT music FROM profile WHERE login = ?", (self.login,)).fetchone()
+        self.music = res[0]
+        con.close()
+
         self.initUI()
         self.start_new_game()
 
     def initUI(self):
-        self.player.play()
+        if self.music == 1:
+            self.player.play()
         self.setWindowTitle("Виселица")
         self.setGeometry(300, 30, 1000, 850)
         self.setFixedSize(1000, 850)
@@ -303,7 +310,8 @@ class HangmanGame(QWidget):
         btn.setEnabled(False)
 
         if letter in self.current_word:
-            self.suc_click.play()
+            if self.music == 1:
+                self.suc_click.play()
             btn.setStyleSheet("""
                 QPushButton {
                     background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #11998e, stop:1 #38ef7d);
@@ -330,7 +338,8 @@ class HangmanGame(QWidget):
                     """)
             self.check_win()
         else:
-            self.eror_click.play()
+            if self.music == 1:
+                self.eror_click.play()
             btn.setStyleSheet("""
                 QPushButton {
                     background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #991b1b, stop:1 #ef4444);
@@ -378,6 +387,6 @@ class HangmanGame(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    game = HangmanGame("sdfds")
+    game = HangmanGame("s")
     game.show()
     sys.exit(app.exec())

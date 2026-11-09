@@ -1,3 +1,4 @@
+import sqlite3
 import sys
 from PyQt6.QtCore import Qt, QRectF, QUrl
 from PyQt6.QtGui import QColor, QPainter, QPixmap
@@ -96,15 +97,21 @@ class Paint(QMainWindow):
         self.audio_output1 = QAudioOutput()
         self.music = QMediaPlayer()
         self.music.setAudioOutput(self.audio_output1)
-        self.music.setSource(QUrl.fromLocalFile("music.mp3"))
+        self.music.setSource(QUrl.fromLocalFile("music.wav"))
         self.music.setLoops(QMediaPlayer.Loops.Infinite)
         self.audio_output1.setVolume(0.05)
+
+        con = sqlite3.connect("proect.db")
+        cur = con.cursor()
+        res = cur.execute("SELECT music FROM profile WHERE login = ?", (self.login,)).fetchone()
+        self.music1 = res[0]
 
         self.initUI()
         self.update_status()
 
     def initUI(self):
-        self.music.play()
+        if self.music1 == 1:
+            self.music.play()
         self.setWindowTitle('Paint')
         self.resize(1100, 760)
         self.setStyleSheet(APP_STYLE)
@@ -263,6 +270,11 @@ class Paint(QMainWindow):
         )
         if not file_path:
             return
+        con = sqlite3.connect('proect.db')
+        cur = con.cursor()
+        cur.execute("update profile set paint=? where login = ?", (1, self.login))
+        con.commit()
+        con.close()
         pixmap = QPixmap(self.canvas.size())
         pixmap.fill(Qt.GlobalColor.white)
         painter = QPainter(pixmap)
@@ -317,6 +329,6 @@ class Paint(QMainWindow):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     app.setStyle('abc')
-    ex = Paint("ds")
+    ex = Paint("s")
     ex.show()
     sys.exit(app.exec())

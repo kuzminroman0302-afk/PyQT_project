@@ -1,11 +1,11 @@
+import random
 import sqlite3
 import sys
-import random
 
+from PyQt6.QtCore import Qt, QTimer, QPointF, QUrl
+from PyQt6.QtGui import QPainter, QColor, QBrush, QPen
 from PyQt6.QtMultimedia import QSoundEffect, QAudioOutput, QMediaPlayer
 from PyQt6.QtWidgets import QWidget, QApplication, QPushButton, QLabel, QVBoxLayout
-from PyQt6.QtGui import QPainter, QColor, QBrush, QPen
-from PyQt6.QtCore import Qt, QTimer, QPointF, QUrl
 
 
 class FlappyBird(QWidget):
@@ -46,6 +46,11 @@ class FlappyBird(QWidget):
         self.player.setLoops(QMediaPlayer.Loops.Infinite)
         self.audio_output.setVolume(0.05)
 
+        self.con = sqlite3.connect("proect.db")
+        self.cur = self.con.cursor()
+        self.res = self.cur.execute("Select music, record_flappy_bird from profile where login = ?", (self.login,)).fetchone()
+        self.music, self.record_flappy_bird = self.res
+
         self.initUI()
 
         self.timer = QTimer(self)
@@ -53,7 +58,8 @@ class FlappyBird(QWidget):
         self.timer.start(16)
 
     def initUI(self):
-        self.player.play()
+        if self.music == 1:
+            self.player.play()
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         self.ground_btn = QPushButton(self)
@@ -123,12 +129,17 @@ class FlappyBird(QWidget):
         self.go_score.setStyleSheet("color: white; font-size: 30px; background: transparent;")
         self.go_score.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
+        self.go_record = QLabel(f"Ваш рекорд: {self.record_flappy_bird}")
+        self.go_record.setStyleSheet("color: white; font-size: 30px; background: transparent;")
+        self.go_record.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
         self.go_restart = QLabel("Нажмите ПРОБЕЛ для рестарта")
         self.go_restart.setStyleSheet("color: white; font-size: 24px; background: transparent;")
         self.go_restart.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         over_layout.addWidget(self.go_title)
         over_layout.addWidget(self.go_score)
+        over_layout.addWidget(self.go_record)
         over_layout.addWidget(self.go_restart)
 
         self.game_over_label.hide()
@@ -154,6 +165,8 @@ class FlappyBird(QWidget):
                             (money + 40, ex + 25, level, self.login))
                 con.commit()
                 con.close()
+            self.con.commit()
+            self.con.close()
             self.player.stop()
             from proect import Lobby
             self.live = Lobby(None, self.login)
@@ -218,7 +231,8 @@ class FlappyBird(QWidget):
                 self.score += 1
                 self.score_label.setText(str(self.score))
 
-            if pipe['x'] < self.bird_x + self.bird_radius and pipe['x'] + self.pipe_width > self.bird_x - self.bird_radius:
+            if pipe['x'] < self.bird_x + self.bird_radius and pipe[
+                'x'] + self.pipe_width > self.bird_x - self.bird_radius:
                 if self.bird_y - self.bird_radius < pipe['top_h']:
                     self.end_game()
                 if self.bird_y + self.bird_radius > pipe['top_h'] + self.pipe_gap:
@@ -229,10 +243,16 @@ class FlappyBird(QWidget):
 
     def end_game(self):
         self.scores.append(self.score)
-        self.over.play()
+        if self.music == 1:
+            self.over.play()
         self.game_over = True
         self.timer.stop()
         self.go_score.setText(f"Ваш счет: {self.score}")
+        if int(self.record_flappy_bird) < self.score:
+            self.record_flappy_bird = self.score
+        self.cur.execute("UPDATE profile SET record_flappy_bird=? WHERE login = ?", (self.record_flappy_bird, self.login))
+        self.con.commit()
+        self.go_record.setText(f"Ваш рекорд: {self.record_flappy_bird}")
         self.game_over_label.show()
         self.game_over_label.raise_()
         self.update()
@@ -288,6 +308,6 @@ class FlappyBird(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    game = FlappyBird("ads")
+    game = FlappyBird("s")
     game.show()
     sys.exit(app.exec())

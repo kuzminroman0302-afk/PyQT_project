@@ -1,32 +1,37 @@
-import json
-import sys
-import sqlite3
-
 import datetime as dt
-from PyQt6.QtCore import Qt, QUrl, QTimer
+import json
+import os
+import random
+import sqlite3
+import sys
+import traceback
 
+from PyQt6.QtCore import Qt, QUrl, QTimer
 from PyQt6.QtGui import QPixmap, QColor
 from PyQt6.QtMultimedia import (QSoundEffect, QAudioOutput, QMediaPlayer)
 from PyQt6.QtWidgets import (QApplication, QWidget, QRadioButton,
                              QPushButton, QLabel, QLineEdit,
                              QCheckBox, QMainWindow,
-                             QInputDialog, QHBoxLayout, QVBoxLayout, QMessageBox, QTableWidgetItem, QHeaderView,
-                             QTableWidget, QFrame, QGridLayout, QSpinBox, QComboBox, QFileDialog, QButtonGroup,
+                             QInputDialog, QHBoxLayout, QVBoxLayout, QMessageBox, QFrame, QGridLayout, QSpinBox,
+                             QComboBox, QFileDialog, QButtonGroup,
                              QGraphicsDropShadowEffect)
-from krestic_nolik_solo import TicTacToe_friend
-from krestic_nolik_bot import TicTacToe_bot
-from viktorina import History
+
 from Clicker import ClickerUI
-from words import HangmanGame
-from reaction import Reaction
-from snake import SnakeGame
 from casino import Casino
-from tetris import TetrisGame
-from paint import Paint
-from math_test import Math
 from flappy_bird import FlappyBird
 from horror import Horror
-import random
+from krestic_nolik_bot import TicTacToe_bot
+from krestic_nolik_solo import TicTacToe_friend
+from math_test import Math
+from paint import Paint
+from reaction import Reaction
+from snake import SnakeGame
+from table import Table
+from tetris import TetrisGame
+from viktorina import History
+from words import HangmanGame
+
+os.environ["QT_LOGGING_RULES"] = "qt.multimedia.*=false"
 
 STYLE = """
 QMainWindow, QDialog, QWidget {
@@ -99,7 +104,9 @@ class Fake(QWidget):
         self.cur = self.con.cursor()
         s = json.dumps([])
 
-        self.cur.execute("UPDATE profile SET money=0, ex=0, level=1, record_snake=0, record_tetris=0, casino=0, paint=0, horror=0, pic=? WHERE login=?", (s, self.login))
+        self.cur.execute(
+            "UPDATE profile SET money=0, ex=0, level=1, record_snake=0, record_tetris=0, casino=0, paint=0, horror=0, rich=0, all_ach=0, record_flappy_bird=0, pic=? WHERE login=?",
+            (s, self.login))
         self.con.commit()
         self.con.close()
 
@@ -350,23 +357,23 @@ class SecondWindow(QWidget):
             return
 
         lst = json.dumps([])
-        self.cur.execute("""INSERT INTO profile(login, password, name, surname, age, country, avatar, level, ex, money, pic, horror, paint, casino, record_snake, record_tetris)
-                    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (self.edit_login.text(), self.edit_password.text(), self.edit_name.text(), self.edit_surname.text(), int(self.spin_age.value()), self.combo_country.currentText(),
-                     ava, 1, 0, 0, lst, 0, 0, 0, 0, 0))
+        self.cur.execute("""INSERT INTO profile(login, password, name, surname, age, country, avatar, level, ex, money, pic, horror, paint, casino, record_snake, record_tetris, rich, music, all_ach, record_flappy_bird)
+                    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                         (self.edit_login.text(), self.edit_password.text(), self.edit_name.text(),
+                          self.edit_surname.text(), int(self.spin_age.value()), self.combo_country.currentText(),
+                          ava, 1, 0, 0, lst, 0, 0, 0, 0, 0, 0, 1, 0, 0))
         self.con.commit()
         self.con.close()
         self.close()
         self.lob = Lobby(True, self.edit_login.text())
         self.lob.show()
 
-
     def ava(self):
         file, ok = QFileDialog.getOpenFileName(
             self, 'Выбери файл', '',
             'Картинки (*.jpg *.png)')
         if not ok or not file:
-            return  
+            return
 
         pix = QPixmap(file)
         self.custom_rad = QRadioButton()
@@ -405,23 +412,49 @@ class Lobby(QWidget):
         self.audio_output = QAudioOutput()
         self.player = QMediaPlayer()
         self.player.setAudioOutput(self.audio_output)
-        self.player.setSource(QUrl.fromLocalFile("music.mp3"))
+        self.player.setSource(QUrl.fromLocalFile("music.wav"))
         self.player.setLoops(QMediaPlayer.Loops.Infinite)
         self.audio_output.setVolume(0.05)
+
+        self.time = QLabel(self)
+        self.time.move(584, 730)
+        self.time.resize(282, 80)
+        self.time.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.time.setStyleSheet("""
+            QLabel {
+                background-color: #1e293b;
+                color: #38bdf8;
+                border: 3px solid #0ea5e9;
+                border-radius: 40px;
+                font-size: 24px;
+                font-weight: bold;
+                font-family: 'Consolas', 'Courier New', monospace;
+                letter-spacing: 1px;
+            }
+        """)
+
+        time_shadow = QGraphicsDropShadowEffect()
+        time_shadow.setBlurRadius(30)
+        time_shadow.setColor(QColor(56, 189, 248, 200))
+        time_shadow.setOffset(0, 0)
+        self.time.setGraphicsEffect(time_shadow)
+
+        self.time.hide()
 
         self.flag_lider = False
 
         self.con = sqlite3.connect("proect.db")
         self.cur = self.con.cursor()
         res = self.cur.execute("""select * from profile where login = ?""", (self.login,)).fetchone()
-        self.login, self.password, self.name, self.surname, self.age, self.country, self.avatar, self.level0, self.ex, self.money, self.pic, self.horror, self.paint, self.casino, self.record_snake, self.record_tetris = res
+        self.login, self.password, self.name, self.surname, self.age, self.country, self.avatar, self.level0, self.ex, self.money, self.pic, self.horror, self.paint, self.casino, self.record_snake, self.record_tetris, self.rich, self.music, self.all_ach, self.record_flappy_bird = res
         self.timer1 = QTimer(self)
         self.timer1.timeout.connect(self.time1)
         self.timer1.start(1000)
         self.initUI()
 
     def initUI(self):
-        self.player.play()
+        if self.music == 1:
+            self.player.play()
         self.setWindowTitle('Lobby')
         self.setFixedSize(1540, 900)
         self.setStyleSheet("""
@@ -500,7 +533,8 @@ class Lobby(QWidget):
         self.continue_btn.hide()
         self.title.hide()
         self.subtitle.hide()
-        self.sound_click.play()
+        if self.music == 1:
+            self.sound_click.play()
 
         self.btn_profile = QPushButton("Профиль", self)
         self.btn_profile.setFixedSize(292, 80)
@@ -580,6 +614,7 @@ class Lobby(QWidget):
         self.paint_btn.setFixedSize(282, 80)
         self.paint_btn.move(292, 820)
         self.paint_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.paint_btn.show()
         self.paint_btn.setStyleSheet("""
             QPushButton {
                 background-color: #ffd166;
@@ -592,7 +627,7 @@ class Lobby(QWidget):
             QPushButton:hover   { background-color: #ffe08a; }
             QPushButton:pressed { background-color: #e6b94a; }
         """)
-        self.paint_btn.clicked.connect(self.paint)
+        self.paint_btn.clicked.connect(self.paint1)
 
         self.bonus_btn = QPushButton("Казино", self)
         self.bonus_btn.setFixedSize(282, 80)
@@ -611,7 +646,7 @@ class Lobby(QWidget):
             QPushButton:hover   { background-color: #ffe08a; }
             QPushButton:pressed { background-color: #e6b94a; }
         """)
-        self.bonus_btn.clicked.connect(self.casino)
+        self.bonus_btn.clicked.connect(self.casino1)
 
         self.leaderboard_btn = QPushButton("Лидерборд", self)
         self.leaderboard_btn.setFixedSize(282, 80)
@@ -649,32 +684,9 @@ class Lobby(QWidget):
                         QPushButton:hover   { background-color: #ffe08a; }
                         QPushButton:pressed { background-color: #e6b94a; }
                     """)
-        self.horror_btn.clicked.connect(self.horror)
-        self.time = QLabel(self)
-        self.time.move(292 + 292, 730)
-        self.time.resize(282, 80)
-        self.time.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.horror_btn.clicked.connect(self.horror1)
         self.time.show()
         self.time1()
-
-        self.time.setStyleSheet("""
-                    QLabel {
-                        background-color: #1e293b;
-                        color: #38bdf8;
-                        border: 3px solid #0ea5e9;
-                        border-radius: 40px;
-                        font-size: 24px;
-                        font-weight: bold;
-                        font-family: 'Consolas', 'Courier New', monospace;
-                        letter-spacing: 1px;
-                    }
-                """)
-
-        time_shadow = QGraphicsDropShadowEffect()
-        time_shadow.setBlurRadius(30)
-        time_shadow.setColor(QColor(56, 189, 248, 200))
-        time_shadow.setOffset(0, 0)
-        self.time.setGraphicsEffect(time_shadow)
 
         self.inf_btn = QPushButton("Наклейки", self)
         self.inf_btn.setFixedSize(282, 80)
@@ -713,6 +725,29 @@ class Lobby(QWidget):
                         QPushButton:pressed { background-color: #e6b94a; }
                     """)
         self.achivki_btn.clicked.connect(self.achivki)
+
+        self.mute_btn = QPushButton(self)
+        self.mute_btn.setFixedSize(80, 80)
+        self.mute_btn.move(1248 - 85, 730)
+        self.mute_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.mute_btn.show()
+        self.mute_btn.setStyleSheet("""
+                        QPushButton {
+                            background-color: #ffd166;
+                            color: #1e3c72;
+                            font-size: 26px;
+                            font-weight: bold;
+                            border: none;
+                            border-radius: 40px;
+                        }
+                        QPushButton:hover   { background-color: #ffe08a; }
+                        QPushButton:pressed { background-color: #e6b94a; }
+                    """)
+        self.mute_btn.clicked.connect(self.mute)
+        if self.music == 1:
+            self.mute_btn.setText("🔇")
+        else:
+            self.mute_btn.setText("🔊")
 
         x = 0
         y = 220
@@ -785,9 +820,24 @@ class Lobby(QWidget):
 
             self.btn_levels.append(self.btn_level)
 
+    def mute(self):
+        if self.mute_btn.text() == '🔇':
+            self.mute_btn.setText("🔊")
+            self.music = 0
+            self.cur.execute("UPDATE profile SET music = 0 WHERE login=?", (self.login,))
+            self.con.commit()
+            self.player.pause()
+        else:
+            self.mute_btn.setText("🔇")
+            self.music = 1
+            self.cur.execute("UPDATE profile SET music = 1 WHERE login=?", (self.login,))
+            self.con.commit()
+            self.player.play()
+
     def achivki(self):
         self.hide_lobby()
-        self.sound_click.play()
+        if self.music == 1:
+            self.sound_click.play()
 
         self.achivki_title = QLabel("🏆 ВАШИ ДОСТИЖЕНИЯ", self)
         self.achivki_title.setGeometry(0, 30, 1540, 80)
@@ -808,7 +858,6 @@ class Lobby(QWidget):
         title_shadow.setColor(QColor(255, 209, 102, 150))
         title_shadow.setOffset(0, 0)
         self.achivki_title.setGraphicsEffect(title_shadow)
-
         achievements = [
             ("Крестики-нолики", "Победить бота в крестиках-ноликах", self.level0 > 1),
             ("История России", "Пройти викторину по истории на 100%", self.level0 > 2),
@@ -819,7 +868,11 @@ class Lobby(QWidget):
             ("Тетрис", "Набрать 100 очков в тетрисе", self.level0 > 7),
             ("Математика", "Пройти математический тест", self.level0 > 8),
             ("Flappy Bird", "Пролететь 20 труб", self.level0 > 9),
-            ("Хоррор", "Выбраться из проклятого дома", False)
+            ("Хоррор", "Выбраться из проклятого дома", int(self.horror) == 1),
+            ("Казино", "Поставить ставку на х25 и выиграть", int(self.casino) == 1),
+            ("Paint", "Нарисуй рисунок и сохрани его", int(self.paint) == 1),
+            ("Магазин", "Купи все наклейки в магазине", len(json.loads(self.pic)) == 10),
+            ("Магнат", "Накопи 1000 монет и больше", int(self.rich) == 1)
         ]
 
         start_x = 140
@@ -898,20 +951,60 @@ class Lobby(QWidget):
         self.btn_back_ach.show()
         self.prof.append(self.btn_back_ach)
 
+        self.btn_money = QPushButton("Получить монеты", self)
+        self.btn_money.setFixedSize(292, 80)
+        self.btn_money.move(0, 820)
+        self.btn_money.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_money.setStyleSheet("""
+                    QPushButton {
+                        background-color: purple;
+                        color: white;
+                        font-size: 26px;
+                        font-weight: bold;
+                        border: none;
+                        border-radius: 40px;
+                    }
+                    QPushButton:hover { background-color: purple; }
+                """)
+        self.btn_money.clicked.connect(self.money_true)
+        self.btn_money.show()
+        self.prof.append(self.btn_money)
+
+    def money_true(self):
+        if self.level0 > 1 and self.level0 > 3 and self.level0 > 4 and self.level0 > 5 and self.level0 > 6 and self.level0 > 7 and self.level0 > 8 and self.level0 > 9 and int(
+                self.horror) == 1 and int(self.casino) == 1 and int(self.paint) == 1 and len(
+            json.loads(self.pic)) == 10 and int(self.rich) == 1 and int(self.all_ach) != 1:
+            self.money += 200
+            QMessageBox.information(self, "Монеты",
+                                    "Вы получили 200 монет за получение всех достижений.\nПоздравляю!!!")
+            self.cur.execute("UPDATE profile SET all_ach=1, money=? WHERE login=?", (self.money, self.login))
+            self.con.commit()
+        elif int(self.all_ach) == 1:
+            QMessageBox.information(self, "Монеты", "Вы уже получили эту награду.")
+        else:
+            QMessageBox.information(self, "Монеты", "Вы не выполнили все достижения.")
+
     def time1(self):
+        if int(self.money) >= 1000 and int(self.rich) == 0:
+            self.rich = 1
+            self.cur.execute("UPDATE profile SET rich=1 WHERE login=?", (self.login,))
+            self.con.commit()
         time = dt.datetime.strftime(dt.datetime.now(), "%Y-%m-%d %H:%M:%S").split()
         self.time.setText(time[1] + "\n" + time[0])
 
-    def horror(self):
+    def horror1(self):
         self.player.stop()
         self.hor = Horror(self.login)
+        self.con.commit()
+        self.con.close()
         self.hor.show()
         self.close()
 
     def inf(self):
         self.flag_lider = True
         self.hide_lobby()
-        self.sound_click.play()
+        if self.music == 1:
+            self.sound_click.play()
 
         descriptions = [
             "«Свидетель» — Кот смотрит прямо в душу. Видел то, что ты натворил в прошлой игре, и теперь молча осуждает.",
@@ -1007,138 +1100,26 @@ class Lobby(QWidget):
 
     def open_leaderboard(self):
         self.sound_click.play()
-        if self.flag_lider:
-            self.btn_lobby.hide()
-        self.hide_lobby()
-
-        rows = self.cur.execute("SELECT name, surname, money, ex, level, age, country FROM profile").fetchall()
-        rows = sorted(rows, key=lambda x: (x[4], x[2], x[1], x[0], x[1], x[-2], x[-1]), reverse=True)
-
-        self.table = QTableWidget(self)
-        self.table.setSortingEnabled(True)
-        self.table.show()
-        self.table.setGeometry(100, 100, 1340, 600)
-        self.table.setRowCount(len(rows))
-        self.table.setColumnCount(len(rows[0]))
-        self.table.setHorizontalHeaderLabels(["Имя", "Фамилия", "Монеты", "Опыт", "Уровень", "Возраст", "Страна"])
-
-        self.table.setStyleSheet("""
-               QTableWidget {
-                   background-color: #0f172a;
-                   color: #e2e8f0;
-                   border: 2px solid #334155;
-                   border-radius: 15px;
-                   gridline-color: #334155;
-                   font-size: 18px;
-                   outline: 0;
-                   selection-background-color: #1e293b;
-                   selection-color: #38bdf8;
-               }
-               QTableWidget::item {
-                   padding: 10px;
-                   border-bottom: 1px solid #1e293b;
-                   border-right: 1px solid #1e293b;
-                   background-color: #0f172a;
-               }
-               QTableWidget::item:alternate {
-                   background-color: #16213e;
-               }
-               QTableWidget::item:selected {
-                   background-color: #1e293b;
-                   color: #38bdf8;
-               }
-               QHeaderView::section {
-                   background-color: #1e293b;
-                   color: #38bdf8;
-                   padding: 12px;
-                   border: none;
-                   border-bottom: 2px solid #38bdf8;
-                   border-right: 1px solid #334155;
-                   font-weight: bold;
-                   font-size: 16px;
-               }
-               QScrollBar:vertical {
-                   border: none;
-                   background: #0f172a;
-                   width: 10px;
-                   margin: 0px;
-               }
-               QScrollBar::handle:vertical {
-                   background: #334155;
-                   min-height: 20px;
-                   border-radius: 5px;
-               }
-               QScrollBar::handle:vertical:hover {
-                   background: #38bdf8;
-               }
-               QTableCornerButton::section {
-                   background-color: #1e293b;
-                   border: none;
-               }
-           """)
-
-        self.table.verticalHeader().setVisible(False)
-        self.table.setAlternatingRowColors(True)
-        self.table.setShowGrid(False)
-
-        for r, row in enumerate(rows):
-            for c, val in enumerate(row):
-                item = QTableWidgetItem(str(val))
-                if isinstance(val, int):
-                    item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-                else:
-                    item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-
-                if r == 0:
-                    item.setBackground(QColor(251, 191, 36, 50))
-                    item.setForeground(QColor(251, 191, 36))
-                    font = item.font()
-                    font.setBold(True)
-                    item.setFont(font)
-
-                self.table.setItem(r, c, item)
-
-        header = self.table.horizontalHeader()
-
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
-
-        header.setSectionResizeMode(6, QHeaderView.ResizeMode.Stretch)
-
-        self.back_btn = QPushButton("Назад", self)
-        self.back_btn.setGeometry(620, 750, 300, 80)
-        self.back_btn.setStyleSheet("""
-               QPushButton {
-                   background-color: #dc2626;
-                   color: white;
-                   font-size: 26px;
-                   font-weight: bold;
-                   border: none;
-                   border-radius: 40px;
-               }
-               QPushButton:hover { background-color: #ef4444; }
-           """)
-        self.back_btn.clicked.connect(self.close_leaderboard)
-        self.back_btn.show()
-
-    def close_leaderboard(self):
-        self.table.hide()
-        self.back_btn.hide()
-        self.on_continue()
-
-    def paint(self):
-        self.sound_click.play()
+        self.close()
         self.player.stop()
+        self.con.commit()
+        self.con.close()
+        self.table = Table(self.login)
+        self.table.show()
+
+    def paint1(self):
+        if self.music == 1:
+            self.sound_click.play()
+        self.player.stop()
+        self.con.commit()
+        self.con.close()
         self.paint_level = Paint(self.login)
         self.paint_level.show()
         self.close()
 
-    def casino(self):
-        self.sound_click.play()
+    def casino1(self):
+        if self.music == 1:
+            self.sound_click.play()
         self.player.stop()
         casino = Casino(self.login)
         self.close()
@@ -1148,6 +1129,7 @@ class Lobby(QWidget):
         self.btn_profile.hide()
         self.btn_shop.hide()
         self.horror_btn.hide()
+        self.mute_btn.hide()
         self.time.hide()
         self.achivki_btn.hide()
         for i in self.kek_pic:
@@ -1165,18 +1147,25 @@ class Lobby(QWidget):
         n = int(self.sender().text().split()[1])
         if self.level0 >= n != 10:
             self.hide_lobby()
-            self.sound_click.play()
+            if self.music == 1:
+                self.sound_click.play()
 
             def friend():
                 self.player.stop()
-                self.sound_click.play()
+                self.con.commit()
+                self.con.close()
+                if self.music == 1:
+                    self.sound_click.play()
                 level1 = TicTacToe_friend(self.login)
                 self.close()
                 level1.show()
 
             def bot():
                 self.player.stop()
-                self.sound_click.play()
+                self.con.commit()
+                self.con.close()
+                if self.music == 1:
+                    self.sound_click.play()
                 level1 = TicTacToe_bot(self.login)
                 self.close()
                 level1.show()
@@ -1265,7 +1254,10 @@ class Lobby(QWidget):
 
             def start():
                 self.player.stop()
-                self.sound_click.play()
+                self.con.commit()
+                self.con.close()
+                if self.music == 1:
+                    self.sound_click.play()
                 if n == 2:
                     self.level2 = History(self.login)
                     self.hide()
@@ -1300,12 +1292,14 @@ class Lobby(QWidget):
                     self.level9.show()
 
             def info():
-                self.sound_click.play()
+                if self.music == 1:
+                    self.sound_click.play()
                 QMessageBox.information(self, "Информация",
                                         text)
 
             def back():
-                self.sound_click.play()
+                if self.music == 1:
+                    self.sound_click.play()
                 self.info_btn2.hide()
                 self.back_btn2.hide()
                 self.start_btn2.hide()
@@ -1397,7 +1391,8 @@ class Lobby(QWidget):
                 self.start_btn2.hide()
 
     def shop_fon(self):
-        self.sound_click.play()
+        if self.music == 1:
+            self.sound_click.play()
         self.hide_lobby()
         self.setStyleSheet("""
             QWidget {
@@ -1515,7 +1510,8 @@ class Lobby(QWidget):
         n = int(self.sender().text().split()[0])
         if self.money >= n:
             if self.pic_lst[self.price_pic.index(n)] not in self.pic:
-                self.buy_click.play()
+                if self.music == 1:
+                    self.buy_click.play()
                 self.money -= n
                 self.balance_label.setText(f"Ваш баланс: {self.money} ฿")
                 n1 = json.loads(self.pic)
@@ -1527,13 +1523,16 @@ class Lobby(QWidget):
                 self.shop_fon()
 
             else:
-                self.eror_click.play()
+                if self.music == 1:
+                    self.eror_click.play()
         else:
-            self.eror_click.play()
+            if self.music == 1:
+                self.eror_click.play()
 
     def profile_fon(self):
         self.hide_lobby()
-        self.sound_click.play()
+        if self.music == 1:
+            self.sound_click.play()
         self.image67 = QPixmap(self.avatar)
         self.image23 = QLabel(self)
         self.image23.move(660, 50)
@@ -1555,7 +1554,7 @@ class Lobby(QWidget):
 
         self.name_label = QLabel(self)
         self.name_label.move(650, 250)
-        self.name_label.setText(f"Имя: {self.surname + ' ' + self.name}")
+        self.name_label.setText(f"Имя: {self.name}")
         self.name_label.resize(1000, 60)
         self.name_label.setStyleSheet("""
             color: #d0e4ff;
@@ -1772,7 +1771,6 @@ class Lobby(QWidget):
         self.lobby.show()
         self.fake.close()
 
-
     def loddy_fon(self):
         for i in self.prof:
             i.hide()
@@ -1879,7 +1877,7 @@ class MainWindow(QMainWindow):
         self.cur = self.con.cursor()
         res = self.cur.execute("""select * from profile where login = ?""", (self.login1.text(),)).fetchone()
         if res:
-            self.login, self.password, self.name, self.surname, self.age, self.country, self.avatar, self.level0, self.ex, self.money, self.pic, self.horror, self.paint, self.casino, self.record_snake, self.record_tetris = res
+            self.login, self.password, self.name, self.surname, self.age, self.country, self.avatar, self.level0, self.ex, self.money, self.pic, self.horror, self.paint, self.casino, self.record_snake, self.record_tetris, self.rich, self.music, self.all_ach, self.record_flappy_bird = res
             if self.password1.text() == self.password:
                 self.login_page.hide()
                 self.error_label.hide()
@@ -2008,6 +2006,12 @@ class MainWindow(QMainWindow):
             """)
             self.robot_true.show()
 
+
+def my_excepthook(type, value, tback):
+    traceback.print_exception(type, value, tback)
+
+
+sys.excepthook = my_excepthook
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

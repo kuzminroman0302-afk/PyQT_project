@@ -1,15 +1,16 @@
+import random
 import sqlite3
 import sys
 
+from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget,
-    QLabel, QPushButton, QRadioButton, QButtonGroup, QGraphicsDropShadowEffect, QMessageBox, QDialog
+    QLabel, QPushButton, QRadioButton, QButtonGroup, QGraphicsDropShadowEffect, QMessageBox
 )
-from PyQt6.QtCore import Qt, QUrl
-from PyQt6.QtGui import QFont, QColor
+
 from calculator import Calculator
-import random
 
 
 class Math(QWidget):
@@ -89,11 +90,18 @@ class Math(QWidget):
         self.eror_click.setSource(QUrl.fromLocalFile("eror.wav"))
         self.eror_click.setVolume(0.2)
 
+        con = sqlite3.connect("proect.db")
+        cur = con.cursor()
+        res = cur.execute("SELECT music FROM profile where login=?", (self.login,)).fetchone()
+        self.music = res[0]
+        con.close()
+
         self.initUI()
         self.show_question()
 
     def initUI(self):
-        self.player.play()
+        if self.music == 1:
+            self.player.play()
         self.setWindowTitle("Математика тест")
         self.setFixedSize(1540, 900)
 
@@ -318,7 +326,8 @@ class Math(QWidget):
         self.stacked_widget.setCurrentWidget(self.question_page)
 
     def check_answer(self):
-        self.sound_click.play()
+        if self.music == 1:
+            self.sound_click.play()
         checked_id = self.button_group.checkedId()
         if checked_id == -1:
             return
@@ -327,7 +336,8 @@ class Math(QWidget):
         is_correct = (checked_id == q["correct"])
 
         if is_correct:
-            self.suc_click.play()
+            if self.music == 1:
+                self.suc_click.play()
             self.score += 1
             self.answer_status_label.setText("✅")
             self.answer_title_label.setText("Верно!")
@@ -335,7 +345,8 @@ class Math(QWidget):
             self.correct_answer_label.setText("Отличная работа! Так держать! 🌟")
             self.next_button.setStyleSheet("background-color: #16a34a; color: white;")
         else:
-            self.eror_click.play()
+            if self.music == 1:
+                self.eror_click.play()
             self.answer_status_label.setText("❌")
             self.answer_title_label.setText("Неверно")
             self.answer_title_label.setStyleSheet("font-size: 48px; font-weight: bold; color: #ef4444;")
@@ -416,6 +427,6 @@ class Math(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    game = Math("ads")
+    game = Math("s")
     game.show()
     sys.exit(app.exec())

@@ -28,10 +28,17 @@ class TicTacToe_bot(QWidget):
         self.sound_click.setSource(QUrl.fromLocalFile("click.wav"))
         self.sound_click.setVolume(0.2)
 
+        con = sqlite3.connect("proect.db")
+        cur = con.cursor()
+        res = cur.execute("SELECT music FROM profile WHERE login = ?", (self.login,)).fetchone()
+        self.music = res[0]
+        con.close()
+
         self.initUI()
 
     def initUI(self):
-        self.player.play()
+        if self.music == 1:
+            self.player.play()
         self.setFixedSize(1540, 900)
         self.setWindowTitle('Крестики нолики')
         x = 500
@@ -108,7 +115,8 @@ class TicTacToe_bot(QWidget):
         self.lobby.show()
 
     def clic(self, i, j):
-        self.sound_click.play()
+        if self.music == 1:
+            self.sound_click.play()
         self.flag = False
         btn = self.button_grid[i][j]
         if btn.text() != ' ' or self.v is False:
@@ -290,6 +298,6 @@ class TicTacToe_bot(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    game = TicTacToe_bot("aaf")
+    game = TicTacToe_bot("s")
     game.show()
     sys.exit(app.exec())
