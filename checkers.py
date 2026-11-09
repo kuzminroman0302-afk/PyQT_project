@@ -1,104 +1,125 @@
-import sqlite3
 import sys
-import random
-
-from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
-from PyQt6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
-    QLabel, QPushButton, QFrame, QGraphicsDropShadowEffect
-)
-from PyQt6.QtCore import Qt, QTimer, QUrl
-from PyQt6.QtGui import QColor
+from PyQt6.QtWidgets import QWidget, QApplication, QPushButton
+from PyQt6.QtCore import Qt
 
 
 class checkers(QWidget):
     def __init__(self, login):
         super().__init__()
         self.login = login
+        self.setWindowTitle("Шашки")
+        self.setFixedSize(800, 800)
 
-        self.board_lst = []
+        self.board = [[0 for _ in range(8)] for _ in range(8)]
+
+        for y in range(8):
+            for x in range(8):
+                if (x + y) % 2 == 1:
+                    if y < 3:
+                        self.board[y][x] = 1
+                    elif y > 4:
+                        self.board[y][x] = 2
+
+        self.selected = None
+        self.buttons = []
 
         self.initUI()
 
     def initUI(self):
-        self.setWindowTitle("Шашки")
-        self.setGeometry(300, 30, 800, 800)
-        self.setFixedSize(800, 800)
+        for y in range(8):
+            row = []
+            for x in range(8):
+                btn = QPushButton(self)
+                btn.setGeometry(x * 100, y * 100, 100, 100)
+                btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+                btn.clicked.connect(lambda checked=False, cx=x, cy=y: self.click(cx, cy))
+                row.append(btn)
+            self.buttons.append(row)
 
-        self.board = []
-        self.chek = []
-        count = -1
-        y = 0
-        for i in range(8):
-            x = 0
-            n = []
-            for j in range(8):
-                self.btn = QPushButton(self)
-                self.btn.move(x, y)
-                self.btn.resize(100, 100)
-                if count % 2 == 0:
-                    self.btn.setStyleSheet("background-color: black;")
-                    if count <= 24:
-                        self.btn_black = QPushButton(self)
-                        self.btn_black.move(x + 25, y + 25)
-                        self.btn_black.resize(50, 50)
-                        self.btn_black.setStyleSheet("background-color: red;")
-                        self.btn_black.clicked.connect(lambda chek=True, x=i, y=j, color="red": self.clic(x, y, color))
+        self.draw_board()
 
-                    elif count >= 43:
-                        self.btn_white = QPushButton(self)
-                        self.btn_white.move(x + 25, y + 25)
-                        self.btn_white.resize(50, 50)
-                        self.btn_white.setStyleSheet("background-color: white;")
-                        self.btn_white.clicked.connect(lambda chek=True, x=i, y=j, color="white": self.clic(x, y, color))
+    def draw_board(self):
+        for y in range(8):
+            for x in range(8):
+                btn = self.buttons[y][x]
 
-                    n.append((1, self.btn))
+                if (x + y) % 2 == 0:
+                    base_color = "tan"
                 else:
-                    self.btn.setStyleSheet("background-color: white;")
-                    n.append((0, self.btn))
-                x += 100
-                count += 1
-            self.board_lst.append(n)
-            count += 1
-            y += 100
+                    base_color = "saddlebrown"
 
-    def clic(self, x, y, color):
-        count = -1
-        for i in self.board_lst:
-            for j in i:
-                if count % 2 == 0:
-                    j[1].setStyleSheet("background-color: black;")
+                if self.selected:
+                    sx, sy = self.selected
+                    if self.is_valid_move(sx, sy, x, y):
+                        base_color = "limegreen"
+
+                if self.selected == (x, y):
+                    base_color = "limegreen"
+
+                piece = self.board[y][x]
+
+                if piece == 1:
+                    btn.setStyleSheet(f"""
+                        QPushButton {{
+                            background-color: {base_color};
+                            border-radius: 50px;
+                            background: qradialgradient(cx:0.4, cy:0.4, radius:0.6, fx:0.4, fy:0.4, 
+                                                        stop:0 red, stop:1 darkred);
+                        }}
+                    """)
+                elif piece == 2:
+                    btn.setStyleSheet(f"""
+                        QPushButton {{
+                            background-color: {base_color};
+                            border-radius: 50px;
+                            background: qradialgradient(cx:0.4, cy:0.4, radius:0.6, fx:0.4, fy:0.4, 
+                                                        stop:0 white, stop:1 gray);
+                        }}
+                    """)
                 else:
-                    j[1].setStyleSheet("background-color: white;")
-                count += 1
-            count += 1
+                    btn.setStyleSheet(f"""
+                        QPushButton {{
+                            background-color: {base_color};
+                            border: none;
+                        }}
+                    """)
 
-        x1 = None
-        y1 = None
-        x2 = None
-        y2 = None
-        if color == "red":
-            if self.board_lst[y + 1][x + 1][0] == 1:
-                x2 = x + 1
-                y2 = y + 1
-            if self.board_lst[y + 1][x - 1][0] == 1:
-                x1 = x - 1
-                y1 = y + 1
-        elif color == "white":
-            if self.board_lst[y - 1][x - 1][0] == 1:
-                x2 = x - 1
-                y2 = y - 1
-            if self.board_lst[y - 1][x + 1][0] == 1:
-                x1 = x + 1
-                y1 = y - 1
+    def click(self, x, y):
+        if self.selected:
+            sx, sy = self.selected
+            if (sx, sy) == (x, y):
+                self.selected = None
+                self.draw_board()
+                return
 
-        for i, y in enumerate(self.board_lst):
-            for j, x in enumerate(self.board_lst[i]):
-                if (i, j) == (x1, y1) or (i, j) == (x2, y2):
-                    print(i, j, x1, y1, x2, y2)
-                    self.board_lst[i][j][1].setStyleSheet("background-color: green;")
+            if self.is_valid_move(sx, sy, x, y):
+                self.board[y][x] = self.board[sy][sx]
+                self.board[sy][sx] = 0
+                self.selected = None
+                self.draw_board()
+                return
 
+        if self.board[y][x] != 0:
+            self.selected = (x, y)
+            self.draw_board()
 
+    def is_valid_move(self, sx, sy, ex, ey):
+        piece = self.board[sy][sx]
+        dx = abs(ex - sx)
+        dy = abs(ey - sy)
+
+        if dx != 1 or dy != 1:
+            return False
+
+        if self.board[ey][ex] != 0:
+            return False
+
+        if piece == 1 and ey < sy:
+            return False
+        if piece == 2 and ey > sy:
+            return False
+
+        return True
 
 
 if __name__ == "__main__":

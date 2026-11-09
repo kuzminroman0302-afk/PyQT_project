@@ -1,6 +1,7 @@
 import sys
-from PyQt6.QtCore import Qt, QRectF
+from PyQt6.QtCore import Qt, QRectF, QUrl
 from PyQt6.QtGui import QColor, QPainter, QPixmap
+from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PyQt6.QtWidgets import (
     QWidget, QApplication, QColorDialog, QPushButton,
     QLabel, QInputDialog, QFileDialog,
@@ -92,10 +93,18 @@ class Paint(QMainWindow):
         self.color = '#fffff'
         self.background = QPixmap()
 
+        self.audio_output1 = QAudioOutput()
+        self.music = QMediaPlayer()
+        self.music.setAudioOutput(self.audio_output1)
+        self.music.setSource(QUrl.fromLocalFile("music.mp3"))
+        self.music.setLoops(QMediaPlayer.Loops.Infinite)
+        self.audio_output1.setVolume(0.05)
+
         self.initUI()
         self.update_status()
 
     def initUI(self):
+        self.music.play()
         self.setWindowTitle('Paint')
         self.resize(1100, 760)
         self.setStyleSheet(APP_STYLE)
@@ -188,6 +197,7 @@ class Paint(QMainWindow):
     def exit(self):
         from proect import Lobby
         self.close()
+        self.music.stop()
         self.exit1 = Lobby(None, self.login)
         self.exit1.show()
 
@@ -284,14 +294,12 @@ class Paint(QMainWindow):
     def size_change(self):
         size, ok = QInputDialog.getText(
             self, 'Размер кисти',
-            'На сколько изменить размер?\n(например 5 или -5)'
+            'Какой размер вы хотите в px?'
         )
         if ok:
-            try:
-                self.size = max(1, self.size + int(size))
+            if size.isdigit():
+                self.size = int(size)
                 self.update_status()
-            except Exception as e:
-                print(e)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Space:

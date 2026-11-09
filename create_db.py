@@ -18,8 +18,12 @@ CREATE TABLE IF NOT EXISTS profile (
     level INTEGER,
     ex INTEGER,
     money INTEGER,
-    pic TEXT
-)
+    pic TEXT,
+    horror INTEGER,
+    paint INTEGER,
+    casino INTEGER,
+    record_snake INTEGER,
+    record_tetris INTEGER)
 ''')
 
 cur.execute('''

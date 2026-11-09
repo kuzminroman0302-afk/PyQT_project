@@ -3,11 +3,12 @@ import sqlite3
 import sys
 import random
 
+from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QLabel, QPushButton, QLineEdit, QMessageBox,
     QDialog, QVBoxLayout
 )
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QUrl
 
 
 class WinDialog(QDialog):
@@ -163,9 +164,32 @@ class Casino(QWidget):
         self.buttons = []
         self.choice_buttons = []
 
+        self.audio_output = QAudioOutput()
+        self.player = QMediaPlayer()
+        self.player.setAudioOutput(self.audio_output)
+        self.player.setSource(QUrl.fromLocalFile("clever.mp3"))
+        self.player.setLoops(QMediaPlayer.Loops.Infinite)
+        self.audio_output.setVolume(0.05)
+
+        self.audio_output1 = QAudioOutput()
+        self.music = QMediaPlayer()
+        self.music.setAudioOutput(self.audio_output1)
+        self.music.setSource(QUrl.fromLocalFile("music.mp3"))
+        self.music.setLoops(QMediaPlayer.Loops.Infinite)
+        self.audio_output1.setVolume(0.05)
+
+        self.buy_click = QSoundEffect()
+        self.buy_click.setSource(QUrl.fromLocalFile("buy.wav"))
+        self.buy_click.setVolume(0.05)
+
+        self.eror_click = QSoundEffect()
+        self.eror_click.setSource(QUrl.fromLocalFile("eror.wav"))
+        self.eror_click.setVolume(0.05)
+
         self.initUI()
 
     def initUI(self):
+        self.music.play()
         self.setWindowTitle("КАЗИНО")
         self.setFixedSize(1000, 900)
         self.setStyleSheet("background-color: #1a1a2e;")
@@ -239,7 +263,7 @@ class Casino(QWidget):
             QPushButton {
                 background-color: #8B0000;
                 color: white;
-                border: 3px solid #FFD700;
+                border: 3px solid #FFD700;  
                 border-radius: 30px;
                 font-size: 26px;
                 font-weight: bold;
@@ -256,6 +280,7 @@ class Casino(QWidget):
 
     def exit(self):
         from proect import Lobby
+        self.music.stop()
         con = sqlite3.connect("proect.db")
         cur = con.cursor()
         cur.execute("UPDATE profile SET money=? WHERE login = ?", (self.balance, self.login))
@@ -358,7 +383,7 @@ class Casino(QWidget):
         self.bet = bet
         self.balance -= bet
         self.label_balance.setText(f"💰 Баланс: {self.balance}")
-
+        self.player.play()
         self.count = 0
         self.timer.start(150)
 
@@ -367,6 +392,7 @@ class Casino(QWidget):
 
         if self.count >= 60:
             self.timer.stop()
+            self.player.stop()
             self.stop()
             return
 
@@ -381,10 +407,11 @@ class Casino(QWidget):
             win = self.bet * win_value
             self.balance += win
             self.label_balance.setText(f"💰 Баланс: {self.balance}")
-
+            self.buy_click.play()
             dlg = WinDialog(self, self.user_choice, win_value, win, self.balance)
             dlg.exec()
         else:
+            self.eror_click.play()
             dlg = LoseDialog(self, self.user_choice, win_value, self.bet, self.balance)
             dlg.exec()
 

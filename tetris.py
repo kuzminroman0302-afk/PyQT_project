@@ -327,7 +327,7 @@ class TetrisGame(QWidget):
         self.tetris.stop()
         self.timer.stop()
         self.close()
-        if self.score >= 10:
+        if self.score >= 100:
             con = sqlite3.connect("proect.db")
             cur = con.cursor()
             money, ex, level = cur.execute("SELECT money, ex, level FROM profile WHERE login=?", (self.login,)).fetchone()

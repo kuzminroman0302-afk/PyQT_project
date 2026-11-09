@@ -2,7 +2,8 @@ import json
 import sys
 import sqlite3
 
-from PyQt6.QtCore import Qt, QUrl
+import datetime as dt
+from PyQt6.QtCore import Qt, QUrl, QTimer
 
 from PyQt6.QtGui import QPixmap, QColor
 from PyQt6.QtMultimedia import (QSoundEffect, QAudioOutput, QMediaPlayer)
@@ -10,7 +11,8 @@ from PyQt6.QtWidgets import (QApplication, QWidget, QRadioButton,
                              QPushButton, QLabel, QLineEdit,
                              QCheckBox, QMainWindow,
                              QInputDialog, QHBoxLayout, QVBoxLayout, QMessageBox, QTableWidgetItem, QHeaderView,
-                             QTableWidget, QFrame, QGridLayout, QSpinBox, QComboBox, QFileDialog, QButtonGroup)
+                             QTableWidget, QFrame, QGridLayout, QSpinBox, QComboBox, QFileDialog, QButtonGroup,
+                             QGraphicsDropShadowEffect)
 from krestic_nolik_solo import TicTacToe_friend
 from krestic_nolik_bot import TicTacToe_bot
 from viktorina import History
@@ -22,6 +24,8 @@ from casino import Casino
 from tetris import TetrisGame
 from paint import Paint
 from math_test import Math
+from flappy_bird import FlappyBird
+from horror import Horror
 import random
 
 STYLE = """
@@ -85,6 +89,52 @@ QMessageBox QPushButton {
 QMessageBox QPushButton:hover   { background-color: #7dd3fc; }
 QMessageBox QPushButton:pressed { background-color: #0ea5e9; }
 """
+
+
+class Fake(QWidget):
+    def __init__(self, login):
+        super().__init__()
+        self.login = login
+        self.con = sqlite3.connect("proect.db")
+        self.cur = self.con.cursor()
+        s = json.dumps([])
+
+        self.cur.execute("UPDATE profile SET money=0, ex=0, level=1, record_snake=0, record_tetris=0, casino=0, paint=0, horror=0, pic=? WHERE login=?", (s, self.login))
+        self.con.commit()
+        self.con.close()
+
+        self.initUI()
+
+    def initUI(self):
+        self.setWindowTitle('Халявы нет')
+        self.setFixedSize(600, 400)
+        self.setStyleSheet("background-color: #0f172a; color: #e2e8f0;")
+
+        layout = QVBoxLayout(self)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.setSpacing(20)
+
+        self.label = QLabel("НИКАКОЙ ХАЛЯВЫ В МОЕМ ПРОЕКТЕ!!!")
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.label.setStyleSheet("color: #ef4444; font-size: 24px; font-weight: bold;")
+        layout.addWidget(self.label)
+
+        self.label_fake = QLabel("ЗА ЭТО Я ОБНУЛЮ ВЕСЬ ТВОЙ АККАУНТ!!!")
+        self.label_fake.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.label_fake.setStyleSheet("color: #ef4444; font-size: 24px; font-weight: bold;")
+        layout.addWidget(self.label_fake)
+
+        self.btn_ok = QPushButton("Понятно")
+        self.btn_ok.setFixedSize(200, 50)
+        self.btn_ok.setStyleSheet("""
+            QPushButton {
+                background-color: #dc2626; color: white;
+                border-radius: 10px; font-size: 18px; font-weight: bold;
+            }
+            QPushButton:hover { background-color: #ef4444; }
+        """)
+        self.btn_ok.clicked.connect(self.close)
+        layout.addWidget(self.btn_ok, alignment=Qt.AlignmentFlag.AlignCenter)
 
 
 class SecondWindow(QWidget):
@@ -300,11 +350,10 @@ class SecondWindow(QWidget):
             return
 
         lst = json.dumps([])
-        self.cur.execute("""INSERT INTO profile(login, password, name, surname, age, country, avatar, level, ex, money, pic)
-                    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        self.cur.execute("""INSERT INTO profile(login, password, name, surname, age, country, avatar, level, ex, money, pic, horror, paint, casino, record_snake, record_tetris)
+                    VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (self.edit_login.text(), self.edit_password.text(), self.edit_name.text(), self.edit_surname.text(), int(self.spin_age.value()), self.combo_country.currentText(),
-                     ava, 1, 0, 0,
-                     lst))
+                     ava, 1, 0, 0, lst, 0, 0, 0, 0, 0))
         self.con.commit()
         self.con.close()
         self.close()
@@ -334,7 +383,7 @@ class SecondWindow(QWidget):
 
 
 class Lobby(QWidget):
-    def __init__(self, flag, login=''):
+    def __init__(self, flag, login):
         self.login = login
         self.flag = flag
         self.prof = []
@@ -365,7 +414,10 @@ class Lobby(QWidget):
         self.con = sqlite3.connect("proect.db")
         self.cur = self.con.cursor()
         res = self.cur.execute("""select * from profile where login = ?""", (self.login,)).fetchone()
-        self.login, self.password, self.name, self.surname, self.age, self.country, self.avatar, self.level0, self.ex, self.money, self.pic = res
+        self.login, self.password, self.name, self.surname, self.age, self.country, self.avatar, self.level0, self.ex, self.money, self.pic, self.horror, self.paint, self.casino, self.record_snake, self.record_tetris = res
+        self.timer1 = QTimer(self)
+        self.timer1.timeout.connect(self.time1)
+        self.timer1.start(1000)
         self.initUI()
 
     def initUI(self):
@@ -468,7 +520,6 @@ class Lobby(QWidget):
             QPushButton:pressed { background-color: #e6b94a; }
         """)
         self.btn_profile.clicked.connect(self.profile_fon)
-
         self.image1 = QPixmap(str(self.avatar))
         self.image2 = QLabel(self)
         self.image2.move(1168, 820)
@@ -529,7 +580,6 @@ class Lobby(QWidget):
         self.paint_btn.setFixedSize(282, 80)
         self.paint_btn.move(292, 820)
         self.paint_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.paint_btn.show()
         self.paint_btn.setStyleSheet("""
             QPushButton {
                 background-color: #ffd166;
@@ -582,6 +632,50 @@ class Lobby(QWidget):
                     """)
         self.leaderboard_btn.clicked.connect(self.open_leaderboard)
 
+        self.horror_btn = QPushButton("Хоррор", self)
+        self.horror_btn.setFixedSize(282, 80)
+        self.horror_btn.move(292, 730)
+        self.horror_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.horror_btn.show()
+        self.horror_btn.setStyleSheet("""
+                        QPushButton {
+                            background-color: #ffd166;
+                            color: #1e3c72;
+                            font-size: 26px;
+                            font-weight: bold;
+                            border: none;
+                            border-radius: 40px;
+                        }
+                        QPushButton:hover   { background-color: #ffe08a; }
+                        QPushButton:pressed { background-color: #e6b94a; }
+                    """)
+        self.horror_btn.clicked.connect(self.horror)
+        self.time = QLabel(self)
+        self.time.move(292 + 292, 730)
+        self.time.resize(282, 80)
+        self.time.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.time.show()
+        self.time1()
+
+        self.time.setStyleSheet("""
+                    QLabel {
+                        background-color: #1e293b;
+                        color: #38bdf8;
+                        border: 3px solid #0ea5e9;
+                        border-radius: 40px;
+                        font-size: 24px;
+                        font-weight: bold;
+                        font-family: 'Consolas', 'Courier New', monospace;
+                        letter-spacing: 1px;
+                    }
+                """)
+
+        time_shadow = QGraphicsDropShadowEffect()
+        time_shadow.setBlurRadius(30)
+        time_shadow.setColor(QColor(56, 189, 248, 200))
+        time_shadow.setOffset(0, 0)
+        self.time.setGraphicsEffect(time_shadow)
+
         self.inf_btn = QPushButton("Наклейки", self)
         self.inf_btn.setFixedSize(282, 80)
         self.inf_btn.move(1248, 730)
@@ -601,35 +695,53 @@ class Lobby(QWidget):
                     """)
         self.inf_btn.clicked.connect(self.inf)
 
+        self.achivki_btn = QPushButton("Достижения", self)
+        self.achivki_btn.setFixedSize(282, 80)
+        self.achivki_btn.move(1248 - 292 - 80, 730)
+        self.achivki_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.achivki_btn.show()
+        self.achivki_btn.setStyleSheet("""
+                        QPushButton {
+                            background-color: #ffd166;
+                            color: #1e3c72;
+                            font-size: 26px;
+                            font-weight: bold;
+                            border: none;
+                            border-radius: 40px;
+                        }
+                        QPushButton:hover   { background-color: #ffe08a; }
+                        QPushButton:pressed { background-color: #e6b94a; }
+                    """)
+        self.achivki_btn.clicked.connect(self.achivki)
+
         x = 0
         y = 220
         y1 = 10
         self.btn_levels = []
         self.kek_pic = []
         self.pic1 = ["icon.png", "quiz.jpg", "reaction.jpg", "human.jpg", "clicker.jpg", "snake.jpg", "tetris.jpg",
-                     "math_level.jpg"]
+                     "math_level.jpg", "flappy_bird.jpg", "checckers.jpg"]
 
         for i in range(10):
-            if i < 8:
-                self.icon = QPixmap(self.pic1[i])
-                self.icon6 = QLabel(self)
-                self.icon6.move(x, y1)
-                self.icon6.resize(270, 200)
-                scaled = self.icon.scaled(
-                    282, 200,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-                self.icon6.setPixmap(scaled)
-                self.icon6.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                self.icon6.setStyleSheet("""
-                    border: 2px solid #334155;
-                    border-radius: 8px;
-                    background-color: #1e293b;
-                    padding: 4px;
-                """)
-                self.icon6.show()
-                self.kek_pic.append(self.icon6)
+            self.icon = QPixmap(self.pic1[i])
+            self.icon6 = QLabel(self)
+            self.icon6.move(x, y1)
+            self.icon6.resize(270, 200)
+            scaled = self.icon.scaled(
+                282, 200,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+            self.icon6.setPixmap(scaled)
+            self.icon6.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.icon6.setStyleSheet("""
+                border: 2px solid #334155;
+                border-radius: 8px;
+                background-color: #1e293b;
+                padding: 4px;
+            """)
+            self.icon6.show()
+            self.kek_pic.append(self.icon6)
 
             self.btn_level = QPushButton(f"Уровень: {i + 1}", self)
             self.btn_level.setFixedSize(282, 80)
@@ -673,9 +785,133 @@ class Lobby(QWidget):
 
             self.btn_levels.append(self.btn_level)
 
+    def achivki(self):
+        self.hide_lobby()
+        self.sound_click.play()
+
+        self.achivki_title = QLabel("🏆 ВАШИ ДОСТИЖЕНИЯ", self)
+        self.achivki_title.setGeometry(0, 30, 1540, 80)
+        self.achivki_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.achivki_title.setStyleSheet("""
+            color: #ffd166; 
+            font-size: 56px; 
+            font-weight: bold; 
+            font-family: 'Georgia', serif;
+            background: transparent;
+            letter-spacing: 2px;
+        """)
+        self.achivki_title.show()
+        self.prof.append(self.achivki_title)
+
+        title_shadow = QGraphicsDropShadowEffect()
+        title_shadow.setBlurRadius(40)
+        title_shadow.setColor(QColor(255, 209, 102, 150))
+        title_shadow.setOffset(0, 0)
+        self.achivki_title.setGraphicsEffect(title_shadow)
+
+        achievements = [
+            ("Крестики-нолики", "Победить бота в крестиках-ноликах", self.level0 > 1),
+            ("История России", "Пройти викторину по истории на 100%", self.level0 > 2),
+            ("Реакция", "Найти все красные кнопки", self.level0 > 3),
+            ("Виселица", "Угадать слово и спасти человечка", self.level0 > 4),
+            ("Кликер", "Выполнить все задания в кликере", self.level0 > 5),
+            ("Змейка", "Набрать 20 очков в змейке", self.level0 > 6),
+            ("Тетрис", "Набрать 100 очков в тетрисе", self.level0 > 7),
+            ("Математика", "Пройти математический тест", self.level0 > 8),
+            ("Flappy Bird", "Пролететь 20 труб", self.level0 > 9),
+            ("Хоррор", "Выбраться из проклятого дома", False)
+        ]
+
+        start_x = 140
+        start_y = 130
+        col_width = 400
+        row_height = 140
+
+        x = start_x
+        y = start_y
+
+        for idx, (name, desc, is_done) in enumerate(achievements):
+            card = QFrame(self)
+            card.setGeometry(x, y, 380, 120)
+            card.setStyleSheet(f"""
+                QFrame {{
+                    background-color: #1e293b;
+                    border: 2px solid {'#16a34a' if is_done else '#dc2626'};
+                    border-radius: 15px;
+                }}
+            """)
+            card.show()
+            self.prof.append(card)
+
+            icon = QLabel("✔" if is_done else "✖", card)
+            icon.setGeometry(15, 15, 40, 40)
+            icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            icon.setStyleSheet(f"""
+                color: {'#16a34a' if is_done else '#dc2626'};
+                font-size: 32px;
+                font-weight: bold;
+                background: transparent;
+            """)
+            icon.show()
+
+            name_lbl = QLabel(name, card)
+            name_lbl.setGeometry(65, 15, 300, 30)
+            name_lbl.setStyleSheet(f"""
+                color: {'#16a34a' if is_done else '#e2e8f0'};
+                font-size: 22px;
+                font-weight: bold;
+                background: transparent;
+            """)
+            name_lbl.show()
+
+            desc_lbl = QLabel(desc, card)
+            desc_lbl.setGeometry(65, 45, 300, 60)
+            desc_lbl.setWordWrap(True)
+            desc_lbl.setStyleSheet("""
+                color: #94a3b8;
+                font-size: 14px;
+                background: transparent;
+            """)
+            desc_lbl.show()
+
+            x += col_width
+            if (idx + 1) % 3 == 0:
+                x = start_x
+                y += row_height
+
+        self.btn_back_ach = QPushButton("Назад", self)
+        self.btn_back_ach.setFixedSize(292, 80)
+        self.btn_back_ach.move(1248, 820)
+        self.btn_back_ach.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_back_ach.setStyleSheet("""
+            QPushButton {
+                background-color: #dc2626;
+                color: white;
+                font-size: 26px;
+                font-weight: bold;
+                border: none;
+                border-radius: 40px;
+            }
+            QPushButton:hover { background-color: #ef4444; }
+        """)
+        self.btn_back_ach.clicked.connect(self.loddy_fon)
+        self.btn_back_ach.show()
+        self.prof.append(self.btn_back_ach)
+
+    def time1(self):
+        time = dt.datetime.strftime(dt.datetime.now(), "%Y-%m-%d %H:%M:%S").split()
+        self.time.setText(time[1] + "\n" + time[0])
+
+    def horror(self):
+        self.player.stop()
+        self.hor = Horror(self.login)
+        self.hor.show()
+        self.close()
+
     def inf(self):
         self.flag_lider = True
         self.hide_lobby()
+        self.sound_click.play()
 
         descriptions = [
             "«Свидетель» — Кот смотрит прямо в душу. Видел то, что ты натворил в прошлой игре, и теперь молча осуждает.",
@@ -896,12 +1132,14 @@ class Lobby(QWidget):
 
     def paint(self):
         self.sound_click.play()
+        self.player.stop()
         self.paint_level = Paint(self.login)
         self.paint_level.show()
         self.close()
 
     def casino(self):
         self.sound_click.play()
+        self.player.stop()
         casino = Casino(self.login)
         self.close()
         casino.show()
@@ -909,6 +1147,9 @@ class Lobby(QWidget):
     def hide_lobby(self):
         self.btn_profile.hide()
         self.btn_shop.hide()
+        self.horror_btn.hide()
+        self.time.hide()
+        self.achivki_btn.hide()
         for i in self.kek_pic:
             i.hide()
         self.image2.hide()
@@ -922,7 +1163,7 @@ class Lobby(QWidget):
 
     def level(self):
         n = int(self.sender().text().split()[1])
-        if self.level0 >= n != 10 and n != 9:
+        if self.level0 >= n != 10:
             self.hide_lobby()
             self.sound_click.play()
 
@@ -1017,6 +1258,11 @@ class Lobby(QWidget):
                                             2 - Вы получаете 35 ฿.\n
                                             Хорошо провести время!'''
 
+            elif n == 9:
+                text = f'''1 - Если вы наберете 20 очков вы сможете пройти на следущий уровень.\n
+                                            2 - Вы получаете 40 ฿.\n
+                                            Хорошо провести время!'''
+
             def start():
                 self.player.stop()
                 self.sound_click.play()
@@ -1048,6 +1294,10 @@ class Lobby(QWidget):
                     self.level8 = Math(self.login)
                     self.hide()
                     self.level8.show()
+                if n == 9:
+                    self.level9 = FlappyBird(self.login)
+                    self.hide()
+                    self.level9.show()
 
             def info():
                 self.sound_click.play()
@@ -1426,6 +1676,33 @@ class Lobby(QWidget):
                 x = 50
                 y += 200
 
+        x = 990
+        y = 50
+        for i in range(self.level0 - 1):
+            self.img = QPixmap(self.pic1[i])
+            self.img2 = QLabel(self)
+            self.img2.move(x, y)
+            self.img2.resize(150, 150)
+            scaled = self.img.scaled(
+                150, 150,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+            self.img2.setPixmap(scaled)
+            self.img2.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.img2.setStyleSheet("""
+                border: 2px solid #334155;
+                border-radius: 8px;
+                background-color: #1e293b;
+                padding: 4px;
+            """)
+            self.img2.show()
+            self.prof.append(self.img2)
+            x += 200
+            if (i + 1) % 3 == 0:
+                x = 990
+                y += 200
+
         self.btn_change = QPushButton("Поменять пароль", self)
         self.btn_change.move(650, 820)
         self.btn_change.setFixedSize(400, 80)
@@ -1445,7 +1722,24 @@ class Lobby(QWidget):
         self.btn_change.clicked.connect(self.changeevent)
         self.prof.append(self.btn_change)
 
-        self.btn_profile.hide()
+        self.btn_money_fake = QPushButton("Получить монеты (бесплатно)", self)
+        self.btn_money_fake.move(0, 840)
+        self.btn_money_fake.setFixedSize(500, 60)
+        self.btn_money_fake.setStyleSheet("""
+            QPushButton {
+                background-color: #ffd166;
+                color: #1e3c72;
+                font-size: 26px;
+                font-weight: bold;
+                border: none;
+                border-radius: 40px;
+            }
+            QPushButton:hover   { background-color: #ffe08a; }
+            QPushButton:pressed { background-color: #e6b94a; }
+        """)
+        self.btn_money_fake.show()
+        self.btn_money_fake.clicked.connect(self.money_fake)
+        self.prof.append(self.btn_money_fake)
 
         self.btn_lobby = QPushButton("Lobby", self)
         self.btn_lobby.setFixedSize(292, 80)
@@ -1466,6 +1760,18 @@ class Lobby(QWidget):
         """)
         self.btn_lobby.clicked.connect(self.loddy_fon)
         self.prof.append(self.btn_lobby)
+
+    def money_fake(self):
+        self.fake = Fake(self.login)
+        self.fake.btn_ok.clicked.connect(self.reload_lobby)
+        self.close()
+        self.fake.show()
+
+    def reload_lobby(self):
+        self.lobby = Lobby(None, self.login)
+        self.lobby.show()
+        self.fake.close()
+
 
     def loddy_fon(self):
         for i in self.prof:
@@ -1573,7 +1879,7 @@ class MainWindow(QMainWindow):
         self.cur = self.con.cursor()
         res = self.cur.execute("""select * from profile where login = ?""", (self.login1.text(),)).fetchone()
         if res:
-            self.login, self.password, self.name, self.surname, self.age, self.country, self.avatar, self.level0, self.ex, self.money, self.pic = res
+            self.login, self.password, self.name, self.surname, self.age, self.country, self.avatar, self.level0, self.ex, self.money, self.pic, self.horror, self.paint, self.casino, self.record_snake, self.record_tetris = res
             if self.password1.text() == self.password:
                 self.login_page.hide()
                 self.error_label.hide()
