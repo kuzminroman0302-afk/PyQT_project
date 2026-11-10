@@ -41,6 +41,10 @@ class TetrisGame(QWidget):
         self.over.setSource(QUrl.fromLocalFile("over.wav"))
         self.over.setVolume(0.3)
 
+        self.buy_click = QSoundEffect()
+        self.buy_click.setSource(QUrl.fromLocalFile("buy.wav"))
+        self.buy_click.setVolume(0.05)
+
         self.audio_output = QAudioOutput()
         self.tetris = QMediaPlayer()
         self.tetris.setAudioOutput(self.audio_output)
@@ -339,6 +343,9 @@ class TetrisGame(QWidget):
         self.score += len(clear) * 10
         if self.score > self.record:
             self.record = self.score
+            self.cur.execute("Update profile set record_tetris=? WHERE login=?",
+                             (self.record, self.login)).fetchone()
+            self.con.commit()
         self.score_label.setText(f"Очки: {self.score}")
         self.record_label.setText(f"Рекорд: {self.record}")
         self.redraw()
@@ -367,15 +374,17 @@ class TetrisGame(QWidget):
         self.tetris.stop()
         self.timer.stop()
         self.close()
-        if self.score > self.record:
+        if int(self.score) > int(self.record):
             self.record = self.score
         if self.score >= 100:
+            if self.music == 1:
+                self.buy_click.play()
             if self.level == 7:
                 self.level += 1
             self.cur.execute("Update profile set money=?, ex=?, level=?, record_tetris=? WHERE login=?",
-                             (self.money + 50, self.ex + 30, self.level, self.record, self.login)).fetchone()
+                             (self.money + 50, self.ex + 40, self.level, self.record, self.login)).fetchone()
             self.con.commit()
-            self.con.close()
+        self.con.close()
         from proect import Lobby
         self.lobby = Lobby(None, self.login)
         self.lobby.show()

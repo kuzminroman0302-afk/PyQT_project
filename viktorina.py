@@ -2,13 +2,13 @@ import random
 import sqlite3
 import sys
 
+from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QStackedWidget,
-    QLabel, QPushButton, QRadioButton, QButtonGroup, QGraphicsDropShadowEffect, QMessageBox
+    QLabel, QPushButton, QRadioButton, QButtonGroup, QGraphicsDropShadowEffect
 )
-from PyQt6.QtCore import Qt, QUrl
-from PyQt6.QtGui import QFont, QColor
 
 
 class History(QWidget):
@@ -22,7 +22,7 @@ class History(QWidget):
         four_question = random.sample(["А.В. Суворов", "М.И. Кутузов", "П.И. Багратион", "М.Б. Барклай-де-Толли"], k=4)
         five_question = random.sample(["1700 год", "1703 год", "1712 год", "1721 год"], k=4)
         six_question = random.sample(["Запуск первого спутника", "Первый полёт человека в космос", "Создание ООН",
-                            "Начало перестройки"], k=4)
+                                      "Начало перестройки"], k=4)
 
         self.questions = [
             {
@@ -334,30 +334,22 @@ class History(QWidget):
         total = len(self.questions)
         percent = round(self.score / total * 100)
         self.player.stop()
+        self.suc_click.play()
         if percent >= 100:
-            QMessageBox.information(self, 'Победа!', 'Поздравляю вы прошли второй уровень!\n'
-                                                     'Вам начислено 30 ฿.\n'
-                                                     'Ex + 15')
-            try:
-                con = sqlite3.connect("proect.db")
-                cur = con.cursor()
-                s = cur.execute("SELECT money, ex, level FROM profile WHERE login=?", (self.login,)).fetchall()
-                cur.execute("UPDATE profile SET money=?, ex=? WHERE login=?", (s[0][0] + 30, s[0][1] + 15, self.login))
+            con = sqlite3.connect("proect.db")
+            cur = con.cursor()
+            s = cur.execute("SELECT money, ex, level FROM profile WHERE login=?", (self.login,)).fetchall()
+            cur.execute("UPDATE profile SET money=?, ex=? WHERE login=?", (s[0][0] + 30, s[0][1] + 20, self.login))
+            if s[0][2] == 2:
+                cur.execute("UPDATE profile SET level=? WHERE login=?", (s[0][2] + 1, self.login))
                 con.commit()
-                if s[0][2] == 2:
-                    cur.execute("UPDATE profile SET level=? WHERE login=?", (s[0][2] + 1, self.login))
-                    con.commit()
-                con.close()
-            except Exception as e:
-                print(e)
-        else:
-            QMessageBox.warning(self, 'Поражение', 'Вы ответили не на все вопросы правильно.\n'
-                                                   'Попробуйте еще раз, чтобы получить награду.')
+            con.close()
 
         self.close()
         from proect import Lobby
         self.lobby = Lobby(None, self.login)
         self.lobby.show()
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

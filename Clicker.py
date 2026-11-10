@@ -420,16 +420,18 @@ class ClickerUI(QWidget):
         self.timer.stop()
         self.save_to_db()
         if self.one == 1 and self.two == 1 and self.three == 1 and self.four == 1 and self.five == 1:
+            self.buy.play()
             cur = self.con.cursor()
-            res = cur.execute("SELECT level money FROM profile WHERE login = ?", (self.login,)).fetchone()
+            res = cur.execute("SELECT level, money, ex FROM profile WHERE login = ?", (self.login,)).fetchone()
             lev = res[0]
+            money = res[1]
+            ex = res[2]
             if res[0] == 5:
                 lev = res[0] + 1
-            cur.execute("""
-                UPDATE profile 
-                SET level = ?
-                WHERE login=?
-            """, (lev, self.login))
+                money += 40
+                ex += 30
+            cur.execute("""UPDATE profile SET level = ?, money = ?, ex = ? WHERE login=?""",
+                        (lev, money, ex, self.login))
             self.con.commit()
             self.con.close()
         self.close()

@@ -46,9 +46,14 @@ class FlappyBird(QWidget):
         self.player.setLoops(QMediaPlayer.Loops.Infinite)
         self.audio_output.setVolume(0.05)
 
+        self.buy_click = QSoundEffect()
+        self.buy_click.setSource(QUrl.fromLocalFile("buy.wav"))
+        self.buy_click.setVolume(0.05)
+
         self.con = sqlite3.connect("proect.db")
         self.cur = self.con.cursor()
-        self.res = self.cur.execute("Select music, record_flappy_bird from profile where login = ?", (self.login,)).fetchone()
+        self.res = self.cur.execute("Select music, record_flappy_bird from profile where login = ?",
+                                    (self.login,)).fetchone()
         self.music, self.record_flappy_bird = self.res
 
         self.initUI()
@@ -153,27 +158,25 @@ class FlappyBird(QWidget):
         return False
 
     def lobby(self):
-        try:
-            if self.true_false():
-                con = sqlite3.connect("proect.db")
-                cur = con.cursor()
-                money, ex, level = cur.execute("SELECT money, ex, level FROM profile WHERE login=?",
-                                               (self.login,)).fetchone()
-                if level == 9:
-                    level += 1
-                cur.execute("UPDATE profile SET money=?, ex=?, level=? WHERE login=?",
-                            (money + 40, ex + 25, level, self.login))
-                con.commit()
-                con.close()
-            self.con.commit()
-            self.con.close()
-            self.player.stop()
-            from proect import Lobby
-            self.live = Lobby(None, self.login)
-            self.live.show()
-            self.close()
-        except Exception as e:
-            print(e)
+        if self.true_false():
+            self.buy_click.play()
+            con = sqlite3.connect("proect.db")
+            cur = con.cursor()
+            money, ex, level = cur.execute("SELECT money, ex, level FROM profile WHERE login=?",
+                                           (self.login,)).fetchone()
+            if level == 9:
+                level += 1
+            cur.execute("UPDATE profile SET money=?, ex=?, level=? WHERE login=?",
+                        (money + 40, ex + 35, level, self.login))
+            con.commit()
+            con.close()
+        self.con.commit()
+        self.con.close()
+        self.player.stop()
+        from proect import Lobby
+        self.live = Lobby(None, self.login)
+        self.live.show()
+        self.close()
 
     def jump(self):
         if self.game_over:
@@ -250,7 +253,8 @@ class FlappyBird(QWidget):
         self.go_score.setText(f"Ваш счет: {self.score}")
         if int(self.record_flappy_bird) < self.score:
             self.record_flappy_bird = self.score
-        self.cur.execute("UPDATE profile SET record_flappy_bird=? WHERE login = ?", (self.record_flappy_bird, self.login))
+        self.cur.execute("UPDATE profile SET record_flappy_bird=? WHERE login = ?",
+                         (self.record_flappy_bird, self.login))
         self.con.commit()
         self.go_record.setText(f"Ваш рекорд: {self.record_flappy_bird}")
         self.game_over_label.show()

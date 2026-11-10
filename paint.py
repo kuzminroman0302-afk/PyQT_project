@@ -1,5 +1,6 @@
 import sqlite3
 import sys
+
 from PyQt6.QtCore import Qt, QRectF, QUrl
 from PyQt6.QtGui import QColor, QPainter, QPixmap
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
@@ -8,7 +9,6 @@ from PyQt6.QtWidgets import (
     QLabel, QInputDialog, QFileDialog,
     QHBoxLayout, QVBoxLayout, QFrame, QMainWindow
 )
-
 
 APP_STYLE = """
 QMainWindow, QWidget {

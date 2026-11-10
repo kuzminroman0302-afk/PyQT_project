@@ -7,7 +7,7 @@ from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget,
-    QLabel, QPushButton, QRadioButton, QButtonGroup, QGraphicsDropShadowEffect, QMessageBox
+    QLabel, QPushButton, QRadioButton, QButtonGroup, QGraphicsDropShadowEffect
 )
 
 from calculator import Calculator
@@ -400,22 +400,14 @@ class Math(QWidget):
             s = cur.execute("SELECT money, ex, level FROM profile WHERE login=?", (self.login,)).fetchone()
 
             if s:
-                current_level = s[2]
-                if current_level == 8:
+                level = s[2]
+                if level == 8:
+                    if self.music == 1:
+                        self.suc_click.play()
                     cur.execute("UPDATE profile SET money=?, ex=?, level=? WHERE login=?",
-                                (s[0] + 30, s[1] + 15, 9, self.login))
+                                (s[0] + 30, s[1] + 20, 9, self.login))
                     con.commit()
-                    QMessageBox.information(self, 'Победа!', 'Поздравляю, вы прошли уровень!\n'
-                                                             'Вам начислено 30 ฿.\n'
-                                                             'Ex + 15\n'
-                                                             'Открыт следующий уровень!')
-                else:
-                    QMessageBox.information(self, 'Победа!', 'Вы уже проходили этот уровень ранее.\n'
-                                                             'Награда не начислена.')
             con.close()
-        else:
-            QMessageBox.warning(self, 'Поражение', 'Вы ответили не на все вопросы правильно.\n'
-                                                   'Попробуйте еще раз, чтобы получить награду.')
 
         self.close()
         if hasattr(self, 'calc_window') and self.calc_window:

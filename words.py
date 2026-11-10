@@ -1,13 +1,13 @@
+import random
 import sqlite3
 import sys
-import random
 
+from PyQt6.QtCore import Qt, QTimer, QUrl
+from PyQt6.QtGui import QColor, QPainter, QPen
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QGridLayout, QMessageBox, QLineEdit
 )
-from PyQt6.QtCore import Qt, QTimer, QUrl
-from PyQt6.QtGui import QColor, QPainter, QPen
 
 
 class GallowsWidget(QWidget):
@@ -232,6 +232,7 @@ class HangmanGame(QWidget):
         self.player.stop()
         if self.winner:
             self.timer.stop()
+            self.suc_click.play()
             con = sqlite3.connect("proect.db")
             cur = con.cursor()
             money, ex, level = cur.execute("SELECT money, ex, level FROM profile WHERE login=?",
@@ -239,7 +240,7 @@ class HangmanGame(QWidget):
             if level == 4:
                 level += 1
             cur.execute("update profile set money=?, ex=?, level=? WHERE login=?",
-                        (money + 35, ex + 20, level, self.login))
+                        (money + 35, ex + 25, level, self.login))
             con.commit()
             con.close()
         from proect import Lobby

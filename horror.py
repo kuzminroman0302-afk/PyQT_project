@@ -21,7 +21,7 @@ class History_boom(QWidget):
     def initUI(self):
         self.setWindowTitle("☠ СТРАШНАЯ ИСТОРИЯ ☠")
         self.setFixedSize(700, 600)
-        self.setWindowModality(Qt.WindowModality.ApplicationModal)   # блокирует Horror
+        self.setWindowModality(Qt.WindowModality.ApplicationModal)
 
         if self.txt == 1:
             text = (
@@ -262,7 +262,7 @@ class Horror(QWidget):
         self.title_label.setGraphicsEffect(title_shadow)
 
         self.drip_left = QPushButton("🩸", self)
-        self.drip_left.setGeometry(30, 30, 60, 80)
+        self.drip_left.setGeometry(30, 30, 80, 80)
         self.drip_left.setStyleSheet("""
             QPushButton { background-color: transparent; color: #8b0000; font-size: 50px; border: none; }
             QPushButton:hover { color: #ff0000; }
@@ -272,7 +272,7 @@ class Horror(QWidget):
         self.drip_left.clicked.connect(self.blood1)
 
         self.drip_right = QPushButton("🩸", self)
-        self.drip_right.setGeometry(930, 30, 60, 80)
+        self.drip_right.setGeometry(930, 30, 80, 80)
         self.drip_right.setStyleSheet("""
             QPushButton { background-color: transparent; color: #8b0000; font-size: 50px; border: none; }
             QPushButton:hover { color: #ff0000; }
@@ -392,10 +392,10 @@ class Horror(QWidget):
 
     def block(self):
         busy = (
-            self.is_animating
-            or self.timer1.isActive()
-            or self.timer2.isActive()
-            or self.timer3.isActive()
+                self.is_animating
+                or self.timer1.isActive()
+                or self.timer2.isActive()
+                or self.timer3.isActive()
         )
         for b in (self.btn_open_one, self.btn_open_two, self.btn_open_three):
             b.setEnabled(not busy)

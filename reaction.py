@@ -1,13 +1,13 @@
+import random
 import sqlite3
 import sys
-import random
 
+from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QColor
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QGridLayout, QFrame, QGraphicsDropShadowEffect)
-from PyQt6.QtCore import Qt, QTimer, QUrl
 
 
 class Second_window(QWidget):
@@ -304,6 +304,7 @@ class Reaction(QWidget):
         if (self.score == 20 and self.misses == 0) or self.misses == 1:
             self.timer.stop()
             self.player1.stop()
+            self.suc_click.play()
 
             if self.misses == 1:
                 n = 0
@@ -318,7 +319,7 @@ class Reaction(QWidget):
                 if level == 3:
                     level += 1
                 cur.execute("UPDATE profile SET money=?, ex=?, level=? WHERE login=?",
-                            (money + 30, ex + 15, level, self.login))
+                            (money + 30, ex + 20, level, self.login))
                 con.commit()
                 con.close()
 

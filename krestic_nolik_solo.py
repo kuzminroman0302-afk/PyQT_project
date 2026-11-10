@@ -3,7 +3,8 @@ import sys
 
 from PyQt6.QtCore import QUrl
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
-from PyQt6.QtWidgets import QApplication, QWidget, QRadioButton, QPushButton, QLabel, QLineEdit, QLCDNumber
+from PyQt6.QtWidgets import QApplication, QWidget, QRadioButton, QPushButton, QLabel
+
 
 class TicTacToe_friend(QWidget):
     def __init__(self, login):
@@ -109,7 +110,6 @@ class TicTacToe_friend(QWidget):
         self.close()
         self.lobby = Lobby(None, self.login)
         self.lobby.show()
-
 
     def hello(self, i, j):
         if self.music == 1:

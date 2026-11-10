@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS profile (
     rich INTEGER,
     music INTEGER,
     all_ach INTEGER,
-    record_flappy_bird INTEGER)''')
+    record_flappy_bird INTEGER,
+    record_memory INTEGER)''')
 
 cur.execute('''
 CREATE TABLE IF NOT EXISTS Clicker (

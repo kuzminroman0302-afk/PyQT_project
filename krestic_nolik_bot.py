@@ -1,11 +1,10 @@
-import json
-import sys
-import sqlite3
-
-from PyQt6.QtCore import Qt, QTimer, QUrl
-from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
-from PyQt6.QtWidgets import QApplication, QWidget, QRadioButton, QPushButton, QLabel, QLineEdit, QLCDNumber, QMessageBox
 import random
+import sqlite3
+import sys
+
+from PyQt6.QtCore import QUrl
+from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
+from PyQt6.QtWidgets import QApplication, QWidget, QRadioButton, QPushButton, QLabel
 
 
 class TicTacToe_bot(QWidget):
@@ -27,6 +26,10 @@ class TicTacToe_bot(QWidget):
         self.sound_click = QSoundEffect()
         self.sound_click.setSource(QUrl.fromLocalFile("click.wav"))
         self.sound_click.setVolume(0.2)
+
+        self.buy_click = QSoundEffect()
+        self.buy_click.setSource(QUrl.fromLocalFile("buy.wav"))
+        self.buy_click.setVolume(0.05)
 
         con = sqlite3.connect("proect.db")
         cur = con.cursor()
@@ -147,6 +150,7 @@ class TicTacToe_bot(QWidget):
 
     def win_user(self):
         self.player.stop()
+        self.buy_click.play()
         con = sqlite3.connect("proect.db")
         cur = con.cursor()
         name, surname, level, money, ex = cur.execute(
@@ -154,13 +158,10 @@ class TicTacToe_bot(QWidget):
 
         self.result.setText(f"Выиграл {surname + " " + name}!")
         self.result.resize(500, 80)
-        QMessageBox.information(self, 'Победа!', 'Поздравляю вы прошли первый уровень!\n'
-                                                 'Вам начислено 25 ฿.\n'
-                                                 'Ex + 10')
         money += 25
         if level == 1:
             level += 1
-        ex += 10
+        ex += 15
         cur.execute("update profile set level=?, money=?, ex=? where login=?",
                     (level, money, ex, self.login))
         con.commit()

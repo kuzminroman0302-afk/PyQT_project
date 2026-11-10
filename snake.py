@@ -1,14 +1,14 @@
+import random
 import sqlite3
 import sys
-import random
 
+from PyQt6.QtCore import Qt, QTimer, QUrl
+from PyQt6.QtGui import QColor
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QLabel, QPushButton, QFrame, QGraphicsDropShadowEffect
 )
-from PyQt6.QtCore import Qt, QTimer, QUrl
-from PyQt6.QtGui import QColor
 
 
 class SnakeGame(QWidget):
@@ -38,9 +38,14 @@ class SnakeGame(QWidget):
         self.over.setSource(QUrl.fromLocalFile("over.wav"))
         self.over.setVolume(0.3)
 
+        self.buy_click = QSoundEffect()
+        self.buy_click.setSource(QUrl.fromLocalFile("buy.wav"))
+        self.buy_click.setVolume(0.05)
+
         self.con = sqlite3.connect('proect.db')
         self.cur = self.con.cursor()
-        self.level, self.ex, self.money, self.record, self.music = self.cur.execute("select level, ex, money, record_snake, music from profile where login=?", (self.login,)).fetchone()
+        self.level, self.ex, self.money, self.record, self.music = self.cur.execute(
+            "select level, ex, money, record_snake, music from profile where login=?", (self.login,)).fetchone()
 
         self.initUI()
 
@@ -96,8 +101,6 @@ class SnakeGame(QWidget):
         self.status_label = QLabel("🟢 Игра идёт")
         self.status_label.setStyleSheet("color: #00e5ff; font-size: 18px; font-weight: bold;")
         top_layout.addWidget(self.status_label)
-
-
 
         shadow = QGraphicsDropShadowEffect(self)
         shadow.setBlurRadius(20)
@@ -269,9 +272,12 @@ class SnakeGame(QWidget):
         self.cur.execute("update profile set record_snake=? where login=?",
                          (self.record, self.login))
         if self.score >= 20:
+            if self.music == 1:
+                self.buy_click.play()
             if self.level == 6:
                 self.level += 1
-            self.cur.execute("update profile set level=?, ex=?, money=?, record_snake=? where login=?", (self.level, self.ex + 20, self.money + 40, self.record, self.login))
+            self.cur.execute("update profile set level=?, ex=?, money=?, record_snake=? where login=?",
+                             (self.level, self.ex + 25, self.money + 35, self.record, self.login))
         self.con.commit()
         self.con.close()
         self.timer.stop()

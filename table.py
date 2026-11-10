@@ -2,11 +2,11 @@ import sqlite3
 import sys
 
 from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtGui import QColor
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QTabWidget, QTableWidget,
                              QVBoxLayout, QWidget, QHeaderView, QPushButton,
                              QTableWidgetItem)
-from PyQt6.QtGui import QColor
 
 
 class Table(QMainWindow):
@@ -20,7 +20,7 @@ class Table(QMainWindow):
         self.cur = self.con.cursor()
 
         self.res = self.cur.execute("""
-            SELECT name, surname, money, ex, level, age, country, record_snake, record_tetris, record_flappy_bird 
+            SELECT name, surname, money, ex, level, age, country, record_snake, record_tetris, record_flappy_bird , record_memory
             FROM profile
         """).fetchall()
 
@@ -188,6 +188,16 @@ class Table(QMainWindow):
         no_match_layout.addWidget(self.no_match_table)
         self.tab_widget.addTab(no_match_widget, "Flappy bird")
 
+        memory = QWidget()
+        memory_layout = QVBoxLayout(memory)
+        self.memory = QTableWidget()
+        self.memory.setSortingEnabled(True)
+        self.memory.verticalHeader().setVisible(False)
+        self.memory.setAlternatingRowColors(True)
+        self.memory.setShowGrid(True)
+        memory_layout.addWidget(self.memory)
+        self.tab_widget.addTab(memory, "Memory")
+
     def exit(self):
         self.player.stop()
         self.con.commit()
@@ -204,6 +214,7 @@ class Table(QMainWindow):
         self.update_count_table()
         self.update_match_table()
         self.update_no_match_table()
+        self.update_memory()
 
     def style_item(self, item, r):
         font = item.font()
@@ -221,6 +232,29 @@ class Table(QMainWindow):
         elif r == 2:
             item.setBackground(QColor(205, 127, 50, 100))
             item.setForeground(QColor(255, 255, 255))
+
+    def update_memory(self):
+        rows = sorted(self.res, key=lambda x: x[10], reverse=True)
+
+        self.memory.setRowCount(len(rows))
+        self.memory.setColumnCount(3)
+        self.memory.setHorizontalHeaderLabels(["Имя", "Фамилия", "Рекорд в Memory"])
+
+        for r, row in enumerate(rows):
+            item1 = QTableWidgetItem(row[0])
+            self.style_item(item1, r)
+            self.memory.setItem(r, 0, item1)
+
+            item2 = QTableWidgetItem(row[1])
+            self.style_item(item2, r)
+            self.memory.setItem(r, 1, item2)
+
+            item3 = QTableWidgetItem(str(row[10]))
+            self.style_item(item3, r)
+            self.memory.setItem(r, 2, item3)
+
+        h = self.memory.horizontalHeader()
+        h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
     def update_data_table(self):
         rows = sorted(self.res, key=lambda x: (x[4], x[2], x[3]), reverse=True)
@@ -286,7 +320,7 @@ class Table(QMainWindow):
         h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
     def update_no_match_table(self):
-        rows = sorted(self.res, key=lambda x: x[-1], reverse=True)
+        rows = sorted(self.res, key=lambda x: x[9], reverse=True)
 
         self.no_match_table.setRowCount(len(rows))
         self.no_match_table.setColumnCount(3)
@@ -301,7 +335,7 @@ class Table(QMainWindow):
             self.style_item(item2, r)
             self.no_match_table.setItem(r, 1, item2)
 
-            item3 = QTableWidgetItem(str(row[-1]))
+            item3 = QTableWidgetItem(str(row[9]))
             self.style_item(item3, r)
             self.no_match_table.setItem(r, 2, item3)
 
