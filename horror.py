@@ -16,12 +16,17 @@ class History_boom(QWidget):
         self.boom.setSource(QUrl.fromLocalFile("door.wav"))
         self.boom.setVolume(0.5)
 
+        self.boom_click = QSoundEffect()
+        self.boom_click.setSource(QUrl.fromLocalFile("boom.wav"))
+        self.boom_click.setVolume(1)
+
         self.initUI()
 
     def initUI(self):
         self.setWindowTitle("☠ СТРАШНАЯ ИСТОРИЯ ☠")
         self.setFixedSize(700, 600)
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
+        self.boom_click.play()
 
         if self.txt == 1:
             text = (
@@ -101,7 +106,7 @@ class History_boom(QWidget):
         self.drip_r.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
 
         self.history = QLabel(text, self)
-        self.history.setGeometry(60, 85, 580, 400)
+        self.history.setGeometry(60, 85, 580, 410)
         self.history.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
         self.history.setWordWrap(True)
         self.history.setStyleSheet(f"""
